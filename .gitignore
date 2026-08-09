@@ -1,0 +1,17 @@
+# Personal financial data — never committed to this public repo
+balance-sheet.csv
+pfm-gio.csv
+*.csv
+
+# Local graphify knowledge-graph output (derived from the data above)
+graphify-out/
+
+# OS / editor junk
+.DS_Store
+.vscode/
+.idea/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
