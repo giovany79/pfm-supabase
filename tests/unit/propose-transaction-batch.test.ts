@@ -99,7 +99,7 @@ describe('createTransactionsBatch', () => {
 });
 
 describe('confirmTransactionChange batch branch', () => {
-  it('applies the pending batch once and returns every created id', async () => {
+  it('uses one confirmation to apply the entire pending batch and return every created id', async () => {
     const createdIds = [
       '11111111-1111-4111-8111-111111111111',
       '22222222-2222-4222-8222-222222222222',

@@ -153,8 +153,10 @@ require the proposal → explicit confirmation flow and client approval.
 
 For a batch create, provide 2–20 complete movements and confirm the agent calls
 `proposeTransactionBatch`, displays every interpreted movement plus the total, and waits
-for the immediately following explicit confirmation before calling
-`confirmTransactionChange`. The result must contain one `transaction_id` per inserted row.
+for one immediately following explicit confirmation covering the entire batch before
+calling `confirmTransactionChange` exactly once with the batch `pending_change_id`. The
+result must contain one `transaction_id` per inserted row. The agent must not propose or
+confirm movements individually.
 
 For whichever surface(s) you validated:
 - **Expected**: an answer whose figure matches the source data, produced by the model

@@ -111,7 +111,7 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 ```json
 {
   "name": "propose_transaction_batch",
-  "description": "Step 1 of 2 for atomically creating 2 to 20 transactions. Every row requires date, description, amount, category, and type_income_expense. This only stores a five-minute proposal; show every returned row and the total, then wait for explicit confirmation before calling confirm_transaction_change.",
+  "description": "Step 1 of 2 for atomically creating 2 to 20 transactions. Call this once with the complete batch. Every row requires date, description, amount, category, and type_income_expense. This stores one five-minute proposal for the whole batch; show every returned row and the total, ask for one confirmation covering the entire batch, and never split it into individual proposals or confirmations.",
   "input_schema": {
     "type": "object",
     "properties": {
@@ -139,14 +139,14 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 }
 ```
 
-**Response**: `{ "pending_change_id", "expires_at", "summary", "transaction_count", "total_amount", "transactions" }`. The batch is not inserted until confirmation.
+**Response**: `{ "pending_change_id", "expires_at", "summary", "transaction_count", "total_amount", "transactions" }`. The batch is not inserted until confirmation. One call to `confirm_transaction_change` with this single `pending_change_id` applies every row atomically; it must not be called once per row.
 
 ## `confirm_transaction_change`
 
 ```json
 {
   "name": "confirm_transaction_change",
-  "description": "Step 2 of 2. Call this ONLY in direct response to Gio explicitly confirming (e.g. 'yes', 'confirmado') the exact change summary propose_transaction_change just returned, in his immediate next message. If Gio's reply is anything other than a clear confirmation of that specific summary, or if any time has passed and you are unsure, do not call this — ask again or restate the proposal instead.",
+  "description": "Step 2 of 2. Call this exactly once ONLY in direct response to Gio explicitly confirming (e.g. 'yes', 'confirmado') the exact single or batch proposal just returned, in his immediate next message. For a batch, this one call applies every row atomically; never call it separately per row. If Gio's reply is anything other than a clear confirmation of that specific proposal, or if any time has passed and you are unsure, do not call this — ask again or restate the proposal instead.",
   "input_schema": {
     "type": "object",
     "properties": {

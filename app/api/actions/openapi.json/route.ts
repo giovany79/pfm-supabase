@@ -35,7 +35,7 @@ const openApiSchema = {
   openapi: '3.1.0',
   info: {
     title: 'PFM Supabase Actions',
-    version: '1.2.0',
+    version: '1.2.1',
     description:
       'Grounded access to Gio personal-finance transactions and snapshots, including a two-step confirmed mutation workflow.',
   },
@@ -95,7 +95,7 @@ const openApiSchema = {
         operationId: 'proposeTransactionBatch',
         summary: 'Propose a batch of transactions without applying it',
         description:
-          'Creates a five-minute proposal for atomically adding 2 to 20 transactions. Show every returned transaction and the summary, then wait for explicit confirmation.',
+          'Call once with the complete set of 2 to 20 transactions. Creates one five-minute proposal for the entire atomic batch. Show every transaction and the total, then ask for one explicit confirmation covering the whole batch. Never split it into individual proposals or confirmations.',
         security: authenticated,
         'x-openai-isConsequential': false,
         requestBody: requestBody('ProposeTransactionBatchInput'),
@@ -107,7 +107,7 @@ const openApiSchema = {
         operationId: 'confirmTransactionChange',
         summary: 'Apply an explicitly confirmed transaction change',
         description:
-          'Applies a pending proposal only after the user explicitly confirms its exact summary in the immediately following message.',
+          'Call exactly once after the user explicitly confirms the exact pending proposal in the immediately following message. If the proposal is a batch, this single call applies every row atomically; never confirm rows individually.',
         security: authenticated,
         'x-openai-isConsequential': true,
         requestBody: requestBody('ConfirmTransactionChangeInput'),

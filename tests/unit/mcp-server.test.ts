@@ -45,6 +45,8 @@ describe('finance MCP server', () => {
     expect(body.result.capabilities.tools).toBeDefined();
     expect(body.result.instructions).toContain('propose_transaction_change');
     expect(body.result.instructions).toContain('confirm_transaction_change');
+    expect(body.result.instructions).toContain('ask for one confirmation covering the entire batch');
+    expect(body.result.instructions).toContain('Never split a batch into individual proposals or confirmations');
   });
 
   it('lists six typed tools and marks confirmation as destructive', async () => {
@@ -62,6 +64,12 @@ describe('finance MCP server', () => {
       minItems: 2,
       maxItems: 20,
     });
+    expect(tools.find((tool) => tool.name === 'propose_transaction_batch')?.description).toContain(
+      'one explicit confirmation covering the entire batch',
+    );
+    expect(tools.find((tool) => tool.name === 'confirm_transaction_change')?.description).toContain(
+      'this one call applies every row atomically',
+    );
     expect(tools.find((tool) => tool.name === 'confirm_transaction_change')?.annotations.destructiveHint).toBe(
       true,
     );

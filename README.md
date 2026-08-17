@@ -199,7 +199,10 @@ El servidor expone seis herramientas: `query_transactions`, `query_snapshots`,
 `aggregate_transactions`, `propose_transaction_change`, `propose_transaction_batch` y
 `confirm_transaction_change`. Las tres primeras consultan datos. Las tres restantes
 implementan una escritura en dos pasos: primero proponen un cambio individual o un lote de
-2 a 20 movimientos y luego requieren confirmación explícita antes de aplicarlo.
+2 a 20 movimientos y luego requieren confirmación explícita antes de aplicarlo. Un lote usa
+un solo `pending_change_id`: se presenta completo, se solicita una única confirmación y se
+llama una sola vez a `confirm_transaction_change`, que inserta todas sus filas atómicamente.
+Nunca se divide un lote en propuestas o confirmaciones individuales.
 
 <a id="chatgpt-setup"></a>
 

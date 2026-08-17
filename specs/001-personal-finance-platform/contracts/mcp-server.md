@@ -46,7 +46,7 @@ random string, e.g. `openssl rand -hex 32`), stored as a Next.js env var, never 
 ## Server info
 
 ```json
-{ "name": "pfm-supabase-qa", "version": "1.2.0" }
+{ "name": "pfm-supabase-qa", "version": "1.2.1" }
 ```
 
 ## Agent client configuration

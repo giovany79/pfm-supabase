@@ -158,9 +158,12 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
    For a new transaction, always collect date, description, amount, category, and type
    (income or expense) before calling proposeTransactionChange — ask for anything missing,
    never infer or default it. For 2 to 20 new transactions, collect all five fields for
-   every row, call proposeTransactionBatch once, show every returned transaction and the
-   batch total, then use the same immediate explicit-confirmation rule before calling
-   confirmTransactionChange. Never split or silently omit an invalid row."* — added
+   every row, call proposeTransactionBatch exactly once with the complete batch, show every
+   returned transaction and the batch total, and ask one question confirming the entire
+   batch. Only if Gio's immediately following message explicitly confirms that exact batch,
+   call confirmTransactionChange exactly once with its pending_change_id; that single call
+   applies every row atomically. Never split a batch into individual proposals or
+   confirmations, and never silently omit an invalid row."* — added
    2026-08-09 (R8) for the mutation flow; the read-only
    portion is the ChatGPT-side equivalent of the original Tool Runner's grounding system
    prompt (research.md R2/R7) and of the Claude.ai side's per-tool-description grounding

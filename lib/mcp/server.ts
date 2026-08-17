@@ -59,11 +59,11 @@ const resultContent = (result: unknown) => ({
 });
 
 export const MCP_SERVER_INSTRUCTIONS =
-  'Use these tools only for Gio personal-finance data. Ground every numeric answer in a read tool result from the current turn; never guess when row_count is 0. Never mix snapshot currencies. For edits and deletes, identify exactly one transaction with query_transactions first. Mutations require two steps: use propose_transaction_change for one movement or propose_transaction_batch for 2 to 20 new movements, show the returned summary and exact fields, then call confirm_transaction_change only after Gio explicitly confirms that exact proposal in the next message. Financial changes are permanent and must never be inferred.';
+  'Use these tools only for Gio personal-finance data. Ground every numeric answer in a read tool result from the current turn; never guess when row_count is 0. Never mix snapshot currencies. For edits and deletes, identify exactly one transaction with query_transactions first. Mutations require two steps: use propose_transaction_change for one movement or call propose_transaction_batch exactly once with all 2 to 20 new movements. For a batch, show every movement and the total, ask for one confirmation covering the entire batch, and then call confirm_transaction_change exactly once with the batch pending_change_id only after Gio explicitly confirms that exact batch in the next message. Never split a batch into individual proposals or confirmations. Financial changes are permanent and must never be inferred.';
 
 export function createFinanceMcpServer() {
   const server = new McpServer(
-    { name: 'pfm-supabase-qa', version: '1.2.0' },
+    { name: 'pfm-supabase-qa', version: '1.2.1' },
     { instructions: MCP_SERVER_INSTRUCTIONS },
   );
 
@@ -132,7 +132,7 @@ export function createFinanceMcpServer() {
     {
       title: 'Proponer lote de movimientos',
       description:
-        'Step 1 of 2 for atomically creating 2 to 20 transactions. Every transaction requires date, description, amount, category, and type. Show the returned summary and transactions, then wait for explicit confirmation.',
+        'Step 1 of 2 for atomically creating 2 to 20 transactions. Call this once with the complete batch. Show every transaction and the total, then ask for one explicit confirmation covering the entire batch. Never propose or confirm its rows individually.',
       inputSchema: proposeTransactionBatchSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
@@ -147,7 +147,7 @@ export function createFinanceMcpServer() {
     {
       title: 'Confirmar cambio de movimiento',
       description:
-        'Step 2 of 2. Apply one pending financial change or batch only after Gio explicitly confirms the exact proposal summary and fields in his immediately following message.',
+        'Step 2 of 2. Call exactly once with the pending_change_id after Gio explicitly confirms the exact proposal in his immediately following message. For a batch, this one call applies every row atomically; never call it separately for individual rows.',
       inputSchema: confirmTransactionChangeSchema,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },

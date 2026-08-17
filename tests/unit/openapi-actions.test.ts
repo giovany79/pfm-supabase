@@ -36,7 +36,7 @@ describe('GPT Actions OpenAPI schema', () => {
     expect(body.servers[0].url).toBe(
       'https://pfm-supabase.vercel.app/api/actions',
     );
-    expect(body.info.version).toBe('1.2.0');
+    expect(body.info.version).toBe('1.2.1');
     expect(Object.keys(body.paths)).toHaveLength(6);
   });
 
@@ -77,5 +77,11 @@ describe('GPT Actions OpenAPI schema', () => {
         'x-openai-isConsequential'
       ],
     ).toBe(false);
+    expect(openApiSchema.paths['/propose-transaction-batch'].post.description).toContain(
+      'one explicit confirmation covering the whole batch',
+    );
+    expect(openApiSchema.paths['/confirm-transaction-change'].post.description).toContain(
+      'this single call applies every row atomically',
+    );
   });
 });
