@@ -116,6 +116,26 @@ No ejecutes `npm run build` simultáneamente con `npm run dev`: ambos escriben e
 pueden desincronizar los artefactos de desarrollo. Detén primero el servidor si necesitas
 validar el build de producción.
 
+## Producción
+
+La aplicación está desplegada en Vercel:
+
+- Aplicación: [https://pfm-supabase.vercel.app](https://pfm-supabase.vercel.app)
+- Esquema OpenAPI: [https://pfm-supabase.vercel.app/api/actions/openapi.json](https://pfm-supabase.vercel.app/api/actions/openapi.json)
+
+Proyecto Vercel: `gv-soft/pfm-supabase`. Las variables públicas de Supabase están
+configuradas para Producción y `SUPABASE_OWNER_REFRESH_TOKEN`/`MCP_ACTIONS_API_KEY` se
+almacenan como secretos sensibles. La clave `SUPABASE_SERVICE_ROLE_KEY`, las credenciales
+del propietario y las conexiones PostgreSQL no se cargan en Vercel.
+
+La conexión automática con GitHub requiere agregar GitHub como **Login Connection** en la
+cuenta Vercel y conectar `giovany79/pfm-supabase` desde Project Settings → Git. Hasta
+entonces, los despliegues se realizan desde este repositorio con:
+
+```bash
+npx vercel@latest deploy --prod
+```
+
 ## Validación
 
 ```bash
@@ -152,12 +172,13 @@ Los contratos detallados están en
 - `/api/actions/*` y `/api/mcp` requieren
   `Authorization: Bearer <MCP_ACTIONS_API_KEY>`.
 - ChatGPT Custom GPT es la integración principal; importa
-  `https://<host>/api/actions/openapi.json`.
-- El conector MCP para Claude.ai es opcional y apunta a `https://<host>/api/mcp`.
+  `https://pfm-supabase.vercel.app/api/actions/openapi.json`.
+- El conector MCP para Claude.ai es opcional y apunta a
+  `https://pfm-supabase.vercel.app/api/mcp`.
 - Las mutaciones conversacionales usan propuesta, confirmación con expiración y auditoría
   antes de modificar una transacción.
 
-Estas integraciones necesitan un despliegue HTTPS público; no pueden configurarse contra
+Estas integraciones usan el despliegue HTTPS público y no deben configurarse contra
 `localhost`.
 
 ## Preparación para Git
