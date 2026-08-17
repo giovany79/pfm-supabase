@@ -1,0 +1,3 @@
+import { NextResponse } from 'next/server';
+const post = (summary: string) => ({ post: { summary, responses: { '200': { description: 'Success' }, '401': { description: 'Unauthorized' } } } });
+export function GET() { return NextResponse.json({ openapi: '3.1.0', info: { title: 'PFM Supabase Actions', version: '1.0.0' }, paths: { '/query-transactions': post('Query transactions'), '/query-snapshots': post('Query snapshots'), '/aggregate-transactions': post('Aggregate transactions'), '/propose-transaction-change': post('Propose a transaction change'), '/confirm-transaction-change': post('Confirm a transaction change') } }); }

@@ -1,19 +1,40 @@
 <!--
 Sync Impact Report
-- Version change: none (template) → 1.0.0 (initial ratification)
-- Modified principles: n/a (initial creation, no prior named principles)
+- Version change: 1.1.0 → 1.2.0
+- Modified principles:
+  - V. Anti-Hallucination in Financial Q&A (NON-NEGOTIABLE) — expanded (not
+    redefined) to cover conversational mutations (create/edit/permanent-delete
+    of transactions) alongside read-only Q&A: mutations MUST be explicitly
+    confirmed, executed only through the same narrow parameterized tools, and
+    logged for audit, in addition to the existing grounding/traceability rules
+    for read answers.
 - Added sections:
-  - I. Data Integrity & Fidelity
-  - II. Privacy & Security of Financial Data
-  - III. Spec-Driven Development
-  - IV. Simplicity (Single-User Scope)
-  - V. Anti-Hallucination in Financial Q&A (NON-NEGOTIABLE)
-  - Additional Constraints (technology stack context: Supabase, CSV source data)
-  - Development Workflow (Spec Kit lifecycle expectations)
-  - Governance (amendment procedure, versioning, compliance review)
-- Removed sections: none (template placeholders only)
-- Templates requiring follow-up: none — plan/spec/tasks templates read this file at
-  runtime and are not modified by this command.
+  - Additional Constraints → new bullet "Mutation confirmation & audit
+    logging" (confirmation lifecycle + minimal non-sensitive audit schema for
+    any create/edit/delete on transaction records, on any surface)
+- Modified sections:
+  - Additional Constraints → "Q&A delivery surface" bullet: replaced the
+    blanket "read-only guarantees do not [change]" language with an explicit,
+    narrow carve-out — the read-only constraint is relaxed only for the
+    confirmed, audited transaction-mutation operations the feature spec
+    defines, everything else about that bullet (auth, narrow parameterized
+    tools, no-raw-SQL, logging requirement) still applies and is now cross-
+    referenced to the new audit-logging bullet.
+- Removed sections: none
+- Rationale for MINOR bump: materially expands existing guidance (Principle V
+  and the Q&A delivery surface constraint) to accommodate conversational
+  mutations that were absent from 1.1.0; no principle or existing guarantee is
+  removed — read-only Q&A keeps every prior guarantee, mutations add new,
+  additive ones (confirmation + audit).
+- Trigger: /speckit-clarify decision (CA1, CA3) for feature
+  001-personal-finance-platform, session 2026-08-09 — spec.md FR-015–FR-023
+  require conversational CRUD that the prior 1.1.0 read-only guarantee
+  prohibited; this amendment resolves that conflict per Governance rules.
+- Templates requiring follow-up: plan.md and tasks.md for the
+  001-personal-finance-platform feature MUST be updated (via /speckit-plan and
+  /speckit-tasks) to implement the confirmation lifecycle, the minimal audit
+  schema, and the client separation (service-role vs RLS-scoped) this
+  amendment assumes — not yet done as of this amendment.
 - Deferred TODOs: none
 -->
 
@@ -86,9 +107,25 @@ rows or aggregation query that produced it, and the system MUST clearly indicate
 when it cannot answer a question because the underlying data is missing or
 insufficient, rather than producing a plausible-sounding guess.
 
+The same conversational surface MAY also apply create, edit, or permanent-delete
+operations to transaction records when the feature spec explicitly requires it, but
+only under all of the following: (a) the operation MUST be presented back to Gio in
+interpreted form and applied only after his explicit, freshly-stated confirmation —
+an unconfirmed, ambiguous, or stale confirmation MUST NOT mutate any record; (b) the
+operation MUST execute only through the same narrow, parameterized tools this
+principle already requires for reads — never free-form SQL, and never a broader
+operation than the one confirmed; (c) every mutation attempt, successful or not,
+MUST be logged per the audit-logging rule in Additional Constraints, so the
+mutation itself is traceable even though the final chat text composed by an
+external calling product is not (see "Q&A delivery surface" below). Grounding and
+read traceability remain non-negotiable and unaffected by this allowance.
+
 **Rationale**: A confidently wrong number about someone's own finances is worse than
 no answer — it can drive real financial decisions. Grounding and traceability are
-non-negotiable for this feature to be trustworthy.
+non-negotiable for this feature to be trustworthy. Extending the same surface to
+confirmed, audited mutations (rather than building a separate write path) keeps the
+system simple (Principle IV) while ensuring every change is still deliberate,
+attributable, and reviewable after the fact.
 
 ## Additional Constraints
 
@@ -104,6 +141,42 @@ non-negotiable for this feature to be trustworthy.
 - **Q&A and dashboard features**: Any LLM or analytics integration MUST read from
   the migrated Supabase data, not from the raw CSVs, once migration for a given
   dataset is complete, to avoid two divergent sources of truth.
+- **Q&A delivery surface**: The Q&A tool surface (Principle V) MAY be exposed
+  through more than one LLM chat product the sole owner already has access to —
+  e.g. a Claude.ai custom connector (MCP) and/or a ChatGPT Custom GPT (Actions) —
+  instead of, or in addition to, an in-app call to a separately billed LLM API,
+  to avoid paying twice for functionality an existing subscription already
+  covers. Each exposed surface MUST authenticate the caller with a single-owner
+  secret (a static bearer token is sufficient per Principle IV — no OAuth flow
+  is required for a one-person system) and MUST expose only the same narrow,
+  parameterized tools Principle V already requires — the transport changes, and
+  the no-raw-SQL guarantee does not. The read-only guarantee is relaxed only for
+  the specific, explicitly confirmed create/edit/permanent-delete transaction
+  operations Principle V and the feature spec define — every other operation
+  exposed by a tool remains read-only. Because the calling chat product, not
+  this system, composes the final answer text on these surfaces, this system
+  cannot verify Principle V's read-traceability guarantee end-to-end for every
+  reply; each tool call (read or mutation) MUST still be logged per the
+  "Mutation confirmation & audit logging" rule below as the audit trail of what
+  data was accessed or changed, and each tool's own description/output MUST
+  instruct the calling model to ground its answer in that data, to say so
+  plainly when a call returns zero rows, and to only apply a mutation after
+  Gio's explicit confirmation of that exact operation.
+- **Mutation confirmation & audit logging**: Any create, edit, or
+  permanent-delete operation on transaction records — on the dashboard/API or
+  any Q&A delivery surface — MUST require Gio's explicit, freshly-stated
+  confirmation of the specific interpreted change immediately before it is
+  applied; an unconfirmed, ambiguous, or stale/expired confirmation MUST NOT
+  mutate data. Every mutation attempt, successful or not, MUST be logged with a
+  minimal, non-sensitive schema: tool/endpoint name, operation type
+  (create/edit/delete), affected transaction ID, timestamp, actor (the single
+  owner), and outcome (success/failure). Per Principle II, this log MUST NOT
+  persist the financial field values themselves — amount, description,
+  category, account/institution, or any other real monetary content — in
+  plaintext or in any other recoverable form; the logger MUST redact or omit
+  those fields from the tool-call input before persisting. Read-only Q&A calls
+  continue to log tool name, non-financial input parameters (e.g. date range,
+  category filter), row count, and timestamp as already required.
 
 ## Development Workflow
 
@@ -140,4 +213,4 @@ re-check its artifacts against the Core Principles above; a principle violation
 that cannot be justified MUST block progress until resolved or the constitution is
 amended.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-09 | **Last Amended**: 2026-08-09
+**Version**: 1.2.0 | **Ratified**: 2026-08-09 | **Last Amended**: 2026-08-09
