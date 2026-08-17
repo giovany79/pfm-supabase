@@ -7,10 +7,10 @@ remain the single source of truth for tool shape. What changed is *how they're i
 they are no longer called by this system's own Claude API loop. Instead they are realized
 as:
 
-**Revised again 2026-08-09 (research.md R8, constitution v1.2.0)**: two mutation tools —
-`propose_transaction_change` and `confirm_transaction_change` — are added below, per spec
-FR-015–FR-023. They share the same narrow-tool, no-raw-SQL discipline as the read tools;
-see research.md R8 §8.1 for the two-step design rationale.
+**Revised again 2026-08-09 (research.md R8, constitution v1.2.0)**: the mutation flow uses
+`propose_transaction_change`, `propose_transaction_batch`, and
+`confirm_transaction_change`. They share the same narrow-tool, no-raw-SQL discipline as
+the read tools; see research.md R8 §8.1 for the two-step design rationale.
 
 - **MCP tools** exposed by the Streamable HTTP MCP server at `/api/mcp` — consumed by a
   Claude.ai custom connector. See [mcp-server.md](mcp-server.md) for the wire protocol.
@@ -106,6 +106,41 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 
 **Response**: `{ "pending_change_id": "<uuid>", "expires_at": "<ISO timestamp, ~5 min out>", "summary": "<human-readable description of exactly what will happen>" }` for a valid request, or a `400`-equivalent validation error listing the specific missing/invalid fields (e.g. for `create` with a missing `category` — FR-021) without creating any pending change.
 
+## `propose_transaction_batch`
+
+```json
+{
+  "name": "propose_transaction_batch",
+  "description": "Step 1 of 2 for atomically creating 2 to 20 transactions. Every row requires date, description, amount, category, and type_income_expense. This only stores a five-minute proposal; show every returned row and the total, then wait for explicit confirmation before calling confirm_transaction_change.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "transactions": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "properties": {
+            "date": { "type": "string", "format": "date" },
+            "description": { "type": "string", "minLength": 1 },
+            "amount": { "type": "number", "minimum": 0 },
+            "category": { "type": "string", "minLength": 1 },
+            "type_income_expense": { "type": "string", "enum": ["income", "expensive"] }
+          },
+          "required": ["date", "description", "amount", "category", "type_income_expense"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["transactions"],
+    "additionalProperties": false
+  }
+}
+```
+
+**Response**: `{ "pending_change_id", "expires_at", "summary", "transaction_count", "total_amount", "transactions" }`. The batch is not inserted until confirmation.
+
 ## `confirm_transaction_change`
 
 ```json
@@ -123,7 +158,7 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 }
 ```
 
-**Response**: `{ "outcome": "success", "operation": "create" | "edit" | "delete", "transaction_id": "<uuid>", "applied_fields": { ... } }` on success (FR-017 — report the outcome and identify the transaction), or `{ "outcome": "failure", "reason": "expired" | "not_found" }` — a `reason: "expired"` response means the 5-minute confirmation window (FR-016) has passed; `reason: "not_found"` covers both an unknown ID and one already consumed by an earlier confirm call, since a `pending_transaction_changes` row is deleted immediately once it's used or found expired (research.md R8 §8.1/§8.3, revised post-`/speckit-analyze` finding CA2 — no row lingers with its real field values after it stops being needed). Either way, the calling model MUST restate the proposed change (call `proposeTransactionChange` again) and ask Gio to confirm afresh rather than retrying the same `pending_change_id`.
+**Response**: a single change returns `{ "outcome": "success", "operation": "create" | "edit" | "delete", "transaction_id", "applied_fields" }`; a batch returns `{ "outcome": "success", "operation": "batch_create", "transaction_ids", "applied_count" }`. A failure returns `{ "outcome": "failure", "reason": "expired" | "not_found" }`. The calling model must create a fresh proposal rather than retrying an expired or consumed `pending_change_id`.
 
 ## Grounding contract (applies on every call, on both surfaces)
 
@@ -154,7 +189,8 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 6. **Mutations are never automatic** (added 2026-08-09, research.md R8, constitution
    v1.2.0; reworded post-`/speckit-analyze`, finding CA1): `confirm_transaction_change`
    only ever applies a change that was (a) previously proposed via
-   `propose_transaction_change`, (b) shown to Gio verbatim, and (c) confirmed within the
+   `propose_transaction_change` or `propose_transaction_batch`, (b) shown to Gio verbatim,
+   and (c) confirmed within the
    short, bounded expiry window (a server-side TTL — the system has no way to verify it was
    literally Gio's "next message", so each tool's description separately instructs the
    calling model never to confirm speculatively); an expired or unknown `pending_change_id`

@@ -17,3 +17,16 @@ export type ProposedChange = {
   date?: string; description?: string; amount?: number; category?: string;
   type_income_expense?: TransactionType;
 };
+
+export type TransactionDraft = {
+  date: string;
+  description: string;
+  amount: number;
+  category: string;
+  type_income_expense: TransactionType;
+};
+
+export type ProposedBatchChange = {
+  operation: 'batch_create';
+  transactions: TransactionDraft[];
+};

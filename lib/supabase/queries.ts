@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   MutationOperation,
   ProposedChange,
+  TransactionDraft,
   Transaction,
   TransactionType,
 } from '@/lib/types';
@@ -225,6 +226,28 @@ export async function createTransaction(
     .single();
   if (error) throw error;
   return data;
+}
+
+export async function createTransactionsBatch(
+  client: SupabaseClient,
+  transactions: TransactionDraft[],
+) {
+  const ownerId = await owner(client);
+  const rows = transactions.map((fields) => ({
+    transaction_id: crypto.randomUUID(),
+    owner_id: ownerId,
+    description: fields.description,
+    type: fields.type_income_expense,
+    amount: fields.amount,
+    category: fields.category,
+    transaction_date: fields.date,
+  }));
+  const { data, error } = await client
+    .from('transactions')
+    .insert(rows)
+    .select('transaction_id');
+  if (error) throw error;
+  return data ?? [];
 }
 export async function updateTransaction(
   client: SupabaseClient,

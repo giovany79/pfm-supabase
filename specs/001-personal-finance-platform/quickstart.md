@@ -21,9 +21,10 @@ validated against `localhost`).
 - `.env.local` (local dev) / host env vars (deployed) populated with
   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
   (migration-only, per research.md R8 — never used by any runtime route),
-  `SUPABASE_OWNER_REFRESH_TOKEN` (added 2026-08-09, R8 — Gio's long-lived Supabase Auth
-  refresh token, used only by `/api/mcp` and `/api/actions/*`'s session client, since those
-  callers have no browser session of their own — see research.md R8 §8.2),
+  `SUPABASE_OWNER_EMAIL` and `SUPABASE_OWNER_PASSWORD` (server-only credentials used by
+  `/api/mcp` and `/api/actions/*` to create a fresh RLS-bound session; a static
+  `SUPABASE_OWNER_REFRESH_TOKEN` is retained only as a legacy fallback because Supabase
+  rotates refresh tokens by default),
   `MCP_ACTIONS_API_KEY` (a long random string, e.g. `openssl rand -hex 32`) — none of these
   committed; Gio's Supabase Auth user id is passed directly to the migration script via its
   `--owner-id` flag (step 2 below), not a separate env var (simplified post-`/speckit-analyze`,
@@ -127,15 +128,33 @@ whichever surface(s) you configured. **6a (ChatGPT) is mandatory**; **6b (Claude
 optional/best-effort** (spec Assumptions, 2026-08-09) — skip 6b if you haven't configured
 that surface, it does not block validation.
 
-**6a. ChatGPT Custom GPT (mandatory)**: build the GPT per contracts/gpt-actions.md (import
-`https://<deployed-host>/api/actions/openapi.json`, set the bearer token, paste the
-Instructions text). Ask: *"How much did I spend on health in [a month with a known health
-transaction]?"*
+**6a. ChatGPT Custom GPT (mandatory)**: follow the repository setup guide in
+[README.md](../../README.md#chatgpt-setup). Import
+`https://pfm-supabase.vercel.app/api/actions/openapi.json`, configure API Key/Bearer with
+the value of `MCP_ACTIONS_API_KEY`, and paste the canonical Instructions from
+[gpt-actions.md](contracts/gpt-actions.md#custom-gpt-configuration).
+Ask: *"How much did I spend on health in [a month with a known health transaction]?"*
 
-**6b. Claude.ai custom connector (optional)**: In claude.ai, Settings → Connectors → add a
-custom connector pointing at `https://<deployed-host>/api/mcp` with the bearer token from
-`MCP_ACTIONS_API_KEY` (see contracts/mcp-server.md). Start a new chat, enable the
-connector, and ask the same question there.
+**6b. Claude.ai custom connector (optional)**: follow
+[README.md](../../README.md#claude-ai-setup). Add a custom
+MCP connector pointing at `https://pfm-supabase.vercel.app/api/mcp` and configure
+`Authorization: Bearer <MCP_ACTIONS_API_KEY>`. Start a new chat, enable the connector, and
+ask the same question there. See [mcp-server.md](contracts/mcp-server.md) for the protocol
+contract.
+
+**6d. Codex or Claude Code agent (optional)**: follow the client-specific setup in
+[README.md](../../README.md#claude-code-setup) or
+[README.md](../../README.md#codex-setup). Export
+`MCP_ACTIONS_API_KEY` before starting the agent from the repository root. Codex reads
+`.codex/config.toml`; Claude Code reads `.mcp.json` after you trust the workspace and approve
+`pfm-finance`. Run `codex mcp list` or `claude mcp list`, then ask the same known-answer
+question. The server must expose six typed tools. Read tools run directly; mutation tools
+require the proposal → explicit confirmation flow and client approval.
+
+For a batch create, provide 2–20 complete movements and confirm the agent calls
+`proposeTransactionBatch`, displays every interpreted movement plus the total, and waits
+for the immediately following explicit confirmation before calling
+`confirmTransactionChange`. The result must contain one `transaction_id` per inserted row.
 
 For whichever surface(s) you validated:
 - **Expected**: an answer whose figure matches the source data, produced by the model

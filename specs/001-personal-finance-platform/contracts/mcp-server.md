@@ -1,11 +1,15 @@
-# Contract: MCP Server (Claude.ai Custom Connector — optional surface)
+# Contract: MCP Server (Claude.ai, Claude Code, and Codex clients)
 
 **Added 2026-08-09 (research.md R7)**. A single Streamable HTTP MCP endpoint exposing the
-tools defined in [qa-tools.md](qa-tools.md) — three read tools plus, as of research.md R8,
-the two mutation tools (`propose_transaction_change`, `confirm_transaction_change`).
+tools defined in [qa-tools.md](qa-tools.md) — three read tools plus the three mutation-flow
+tools (`propose_transaction_change`, `propose_transaction_batch`,
+`confirm_transaction_change`).
 Configured once in claude.ai under Settings → Connectors as a custom connector pointing at
 this URL. **This surface is optional/best-effort** (spec Assumptions, 2026-08-09) — ChatGPT
 (gpt-actions.md) is the mandatory surface; nothing in this file gates a success criterion.
+The same endpoint can also be consumed from Codex and Claude Code as project-scoped agent
+tooling. Their checked-in configuration references `MCP_ACTIONS_API_KEY` from the process
+environment and never embeds its value.
 
 ## Endpoint
 
@@ -35,15 +39,25 @@ random string, e.g. `openssl rand -hex 32`), stored as a Next.js env var, never 
 
 | Method | Behavior |
 |---|---|
-| `initialize` | Standard MCP handshake; server declares `tools` capability only (no `resources`, no `prompts` needed for this feature) |
-| `tools/list` | Returns all five tool definitions from qa-tools.md (three read, two mutation — added 2026-08-09, research.md R8), translated to MCP's `Tool` shape (`name`, `description`, `inputSchema` — identical to the `input_schema` JSON Schema already defined) |
+| `initialize` | Standard MCP handshake; server declares `tools` capability and server-wide grounding/confirmation instructions (no `resources` or `prompts`) |
+| `tools/list` | Returns all six tool definitions from qa-tools.md (three read, two proposal tools, and one confirmation tool), translated to MCP's `Tool` shape (`name`, `description`, `inputSchema`) |
 | `tools/call` | Dispatches to `lib/mcp/tools.ts`'s handler for the named tool, validates input against the schema, calls `lib/supabase/queries.ts` via `lib/supabase/session-client.ts` (never the service-role client — research.md R8), logs the call — reads to `qa_queries` with `channel: 'mcp'`, `confirm_transaction_change` calls to `transaction_mutations` with `channel: 'mcp'` (redacted schema, no field values) — and returns the result as MCP `content` (a single `text` block containing the JSON result — Claude reads structured data from tool results routinely) |
 
 ## Server info
 
 ```json
-{ "name": "pfm-supabase-qa", "version": "1.0.0" }
+{ "name": "pfm-supabase-qa", "version": "1.2.0" }
 ```
+
+## Agent client configuration
+
+- **Codex**: `.codex/config.toml` uses Streamable HTTP, reads the bearer token from the
+  `MCP_ACTIONS_API_KEY` environment variable, auto-allows reads, and prompts for writes.
+- **Claude Code**: `.mcp.json` uses `type: "http"` and expands
+  `Authorization: Bearer ${MCP_ACTIONS_API_KEY}` at runtime. Project MCP approval remains a
+  deliberate one-time manual action in a trusted workspace.
+- Both clients connect to `https://pfm-supabase.vercel.app/api/mcp` and receive the same six
+  tool definitions and confirmation workflow.
 
 ## Example `tools/call` request/response
 

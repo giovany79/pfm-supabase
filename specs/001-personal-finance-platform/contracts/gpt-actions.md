@@ -14,13 +14,14 @@ connector (mcp-server.md) is optional/best-effort.
 | `POST` | `/api/actions/query-snapshots` | `query_snapshots` |
 | `POST` | `/api/actions/aggregate-transactions` | `aggregate_transactions` |
 | `POST` | `/api/actions/propose-transaction-change` | `propose_transaction_change` — added 2026-08-09 (R8) |
+| `POST` | `/api/actions/propose-transaction-batch` | `propose_transaction_batch` — proposes 2–20 atomic creates |
 | `POST` | `/api/actions/confirm-transaction-change` | `confirm_transaction_change` — added 2026-08-09 (R8) |
 | `GET` | `/api/actions/openapi.json` | Serves the OpenAPI schema below (public, no auth — it contains no financial data, only the API shape) |
 
 Each `POST` endpoint's request body is exactly the tool's `input_schema` from qa-tools.md;
 each response body is exactly the tool's result shape. Same validation, same "empty result,
-not an error" behavior for the read endpoints; the two mutation endpoints follow qa-tools.md's
-propose/confirm response shapes exactly. Read calls log to `qa_queries` with
+not an error" behavior for the read endpoints; the three mutation-flow endpoints follow
+qa-tools.md's propose/confirm response shapes exactly. Read calls log to `qa_queries` with
 `channel: 'action'`; `confirm-transaction-change` calls log to `transaction_mutations` with
 `channel: 'action'` (redacted schema — research.md R8) — see qa-tools.md's Grounding
 Contract, which applies identically here.
@@ -42,7 +43,7 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
 ```json
 {
   "openapi": "3.1.0",
-  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.0.0" },
+  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.2.0" },
   "servers": [{ "url": "https://<deployed-host>/api/actions" }],
   "paths": {
     "/query-transactions": {
@@ -89,6 +90,17 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
         "responses": { "200": { "description": "Pending change created, or a validation error listing missing/invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProposeTransactionChangeResult" } } } } }
       }
     },
+    "/propose-transaction-batch": {
+      "post": {
+        "operationId": "proposeTransactionBatch",
+        "summary": "Step 1 of 2 for atomically creating 2–20 complete transactions. Returns the exact interpreted batch, total, pending_change_id, and summary; it does not modify transactions.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProposeTransactionBatchInput" } } }
+        },
+        "responses": { "200": { "description": "Pending batch proposal", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProposeTransactionBatchResult" } } } } }
+      }
+    },
     "/confirm-transaction-change": {
       "post": {
         "operationId": "confirmTransactionChange",
@@ -107,6 +119,7 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
       "QuerySnapshotsInput": { "$ref": "qa-tools.md#query_snapshots.input_schema (copied verbatim)" },
       "AggregateTransactionsInput": { "$ref": "qa-tools.md#aggregate_transactions.input_schema (copied verbatim)" },
       "ProposeTransactionChangeInput": { "$ref": "qa-tools.md#propose_transaction_change.input_schema (copied verbatim) — added 2026-08-09 (R8)" },
+      "ProposeTransactionBatchInput": { "$ref": "qa-tools.md#propose_transaction_batch.input_schema (copied verbatim)" },
       "ConfirmTransactionChangeInput": { "$ref": "qa-tools.md#confirm_transaction_change.input_schema (copied verbatim) — added 2026-08-09 (R8)" }
     }
   }
@@ -118,6 +131,8 @@ served by `GET /api/actions/openapi.json` MUST inline the real JSON Schema objec
 qa-tools.md (OpenAPI 3.1 uses JSON Schema directly, so no translation is needed beyond
 copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
 `{groups, row_count}`).
+
+<a id="custom-gpt-configuration"></a>
 
 ## Custom GPT configuration (manual, one-time, done in the ChatGPT UI — not code)
 
@@ -142,7 +157,11 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
    Gio the confirmation window passed and restate the proposed change before asking again.
    For a new transaction, always collect date, description, amount, category, and type
    (income or expense) before calling proposeTransactionChange — ask for anything missing,
-   never infer or default it."* — added 2026-08-09 (R8) for the mutation flow; the read-only
+   never infer or default it. For 2 to 20 new transactions, collect all five fields for
+   every row, call proposeTransactionBatch once, show every returned transaction and the
+   batch total, then use the same immediate explicit-confirmation rule before calling
+   confirmTransactionChange. Never split or silently omit an invalid row."* — added
+   2026-08-09 (R8) for the mutation flow; the read-only
    portion is the ChatGPT-side equivalent of the original Tool Runner's grounding system
    prompt (research.md R2/R7) and of the Claude.ai side's per-tool-description grounding
    (qa-tools.md).

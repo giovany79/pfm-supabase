@@ -199,12 +199,14 @@ one description was flagged as a real access-control ambiguity by `/speckit-anal
   FR-012 access gate for the dashboard: someone without Gio's login cannot get a session,
   so RLS returns nothing for them. This mechanism needs no refresh token and is unrelated to
   the bullet below.
-- **`/api/mcp` and `/api/actions/*` only**: these requests arrive from claude.ai/ChatGPT
+- **`/api/mcp` and `/api/actions/*` only**: these requests arrive from agent clients
   with no browser and no session cookie — only a static bearer token
   (`MCP_ACTIONS_API_KEY`). `lib/supabase/session-client.ts` solves *this* problem: a
-  long-lived refresh token, minted once at setup and stored as
-  `SUPABASE_OWNER_REFRESH_TOKEN`, is exchanged server-side for a fresh access token bound to
-  Gio's real user so the subsequent query still runs with `auth.uid()` = Gio and RLS applies.
+  server-only owner credentials create a fresh Supabase session bound to Gio's real user, so
+  the subsequent query still runs with `auth.uid()` = Gio and RLS applies. This supersedes
+  the original static-refresh-token mechanism: Supabase rotates refresh tokens by default,
+  so a value stored immutably in Vercel eventually becomes invalid. The refresh-token path
+  remains only as a compatibility fallback.
   The bearer-token check remains the *caller* authentication layer (proves the request came
   from Gio's ChatGPT/Claude.ai) for this surface only; `session-client.ts` is the
   *data-access* layer behind it, used **only after** that bearer check passes.

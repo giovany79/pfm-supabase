@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pfm-finance": {
+      "type": "http",
+      "url": "https://pfm-supabase.vercel.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_ACTIONS_API_KEY}"
+      },
+      "timeout": 30000
+    }
+  }
+}
