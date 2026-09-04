@@ -17,7 +17,8 @@ o modificar movimientos, activos y pasivos desde el dashboard y desde integracio
 - Rango inicial del mes actual: primer día del mes hasta la fecha vigente.
 - Orden cronológico descendente y orden alternable por valor.
 - Histórico mensual de ingresos y gastos, con barras por categorías principales y
-  gráfica de línea para una categoría seleccionada.
+  gráfica de línea para una categoría seleccionada, además de una comparación mensual
+  de ingresos en verde frente a gastos en rojo.
 - Administración manual de tasas de cambio hacia COP.
 - Herramientas autenticadas para ChatGPT Actions y un servidor MCP opcional.
 - RLS en todas las tablas financieras y separación del cliente `service_role`.

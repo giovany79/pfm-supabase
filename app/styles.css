@@ -923,6 +923,12 @@ tbody tr:hover {
   color: var(--muted);
   font-size: 0.78rem;
 }
+.monthly-comparison-panel {
+  margin-bottom: 1.25rem;
+}
+.monthly-comparison-chart {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.7), rgba(255, 255, 255, 0));
+}
 .snapshot-history-grid {
   display: grid;
   gap: 1.25rem;

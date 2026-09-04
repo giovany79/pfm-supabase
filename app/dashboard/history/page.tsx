@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { DashboardNav } from '../dashboard-nav';
+import { buildMonthlyComparison } from '@/lib/monthly-comparison';
 
 type MonthRow = { month: string; values: Record<string, number> };
 type HistoryGroup = { categories: string[]; series: MonthRow[] };
@@ -198,6 +199,41 @@ function HistoryChart({
   );
 }
 
+function MonthlyComparisonChart({ data }: { data: HistoryResponse }) {
+  const series = useMemo(
+    () => buildMonthlyComparison(data.months, data.income.series, data.expense.series),
+    [data],
+  );
+
+  return (
+    <section className="panel history-panel monthly-comparison-panel">
+      <div className="history-heading">
+        <div>
+          <h2>Ingresos vs. gastos por mes</h2>
+          <p>Comparación mensual de todos los movimientos registrados.</p>
+        </div>
+      </div>
+      {series.length ? (
+        <div className="history-chart monthly-comparison-chart" style={{ height: 390, minHeight: 390 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series} margin={{ top: 15, right: 20, bottom: 5, left: 5 }} barGap={4}>
+              <CartesianGrid stroke="#e8ebf0" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" tickFormatter={monthLabel} axisLine={false} tickLine={false} minTickGap={24} fontSize={11} />
+              <YAxis tickFormatter={(value) => compact.format(Number(value))} axisLine={false} tickLine={false} width={58} fontSize={11} />
+              <Tooltip labelFormatter={(value) => monthLabel(String(value))} formatter={(value, name) => [money(Number(value)), String(name)]} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
+              <Bar dataKey="income" name="Ingresos" fill="#12a66a" radius={[5, 5, 0, 0]} maxBarSize={38} />
+              <Bar dataKey="expense" name="Gastos" fill="#e0524d" radius={[5, 5, 0, 0]} maxBarSize={38} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="empty-state compact">No hay movimientos para construir esta gráfica.</div>
+      )}
+    </section>
+  );
+}
+
 export default function HistoryPage() {
   const [data, setData] = useState<HistoryResponse>();
   const [loading, setLoading] = useState(true);
@@ -257,6 +293,7 @@ export default function HistoryPage() {
             <section className="card"><span>Gastos históricos</span><strong className="negative">{money(totals.expense)}</strong></section>
             <section className="card"><span>Movimientos analizados</span><strong>{data.row_count.toLocaleString('es-CO')}</strong><p>{data.months.length} meses con información</p></section>
           </div>
+          <MonthlyComparisonChart data={data} />
           <HistoryChart
             title="Histórico de ingresos"
             description="Composición mensual de los ingresos"
