@@ -9,7 +9,7 @@
 ## Summary
 
 Migrate Gio's personal finance history (`balance-sheet.csv` asset/liability snapshots,
-`pfm-gio.csv` income/expense transactions) into Supabase (Postgres) as the single source
+`pfm-gio.csv` income/expense/saving transactions) into Supabase (Postgres) as the single source
 of truth, then build three capabilities on top of it: (1) complex querying directly against
 the centralized data, (2) a web dashboard with key financial metrics and charts, and (3) a
 natural-language Q&A **and mutation** assistant that answers questions and applies

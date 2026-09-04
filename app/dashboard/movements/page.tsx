@@ -46,6 +46,14 @@ const money = (value: number) =>
   });
 const date = (value: string) =>
   new Date(`${value}T00:00:00`).toLocaleDateString('es-CO');
+const typeLabel = (type: TransactionType) =>
+  ({ income: 'Ingreso', expensive: 'Gasto', saving: 'Ahorro' })[type];
+const amountTone = (type: TransactionType) =>
+  type === 'income'
+    ? 'positive'
+    : type === 'saving'
+      ? 'saving-value'
+      : 'negative';
 
 export default function MovementsPage() {
   const [rows, setRows] = useState<Transaction[]>([]);
@@ -102,7 +110,7 @@ export default function MovementsPage() {
           all[row.type] += Number(row.amount);
           return all;
         },
-        { income: 0, expensive: 0 },
+        { income: 0, expensive: 0, saving: 0 },
       ),
     [rows],
   );
@@ -184,7 +192,12 @@ export default function MovementsPage() {
   }
 
   async function remove(row: Transaction) {
-    if (!window.confirm(`¿Eliminar “${row.description}”? Esta acción no se puede deshacer.`)) return;
+    if (
+      !window.confirm(
+        `¿Eliminar “${row.description}”? Esta acción no se puede deshacer.`,
+      )
+    )
+      return;
     setError('');
     try {
       const response = await fetch(`/api/transactions/${row.transaction_id}`, {
@@ -209,7 +222,9 @@ export default function MovementsPage() {
         <div>
           <p className="eyebrow">Finanzas personales</p>
           <h1>Ingresos y gastos</h1>
-          <p className="subtitle">Consulta y administra todos tus movimientos.</p>
+          <p className="subtitle">
+            Consulta y administra todos tus movimientos.
+          </p>
         </div>
         <button className="primary-button" onClick={openCreate}>
           + Nuevo movimiento
@@ -222,7 +237,10 @@ export default function MovementsPage() {
         <div className="filter-control type-filter-control">
           <span>Tipo</span>
           <div className="type-filter" aria-label="Filtrar por tipo">
-            <button className={!type ? 'active' : ''} onClick={() => setType('')}>
+            <button
+              className={!type ? 'active' : ''}
+              onClick={() => setType('')}
+            >
               Todos
             </button>
             <button
@@ -237,15 +255,26 @@ export default function MovementsPage() {
             >
               Gastos
             </button>
+            <button
+              className={type === 'saving' ? 'active saving' : ''}
+              onClick={() => setType('saving')}
+            >
+              Ahorros
+            </button>
           </div>
         </div>
         <div className="movement-filter-fields">
           <label className="category-filter">
             Categoría
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
+            >
               <option value="">Todas las categorías</option>
               {categories.map((item) => (
-                <option key={item} value={item}>{item}</option>
+                <option key={item} value={item}>
+                  {item}
+                </option>
               ))}
             </select>
           </label>
@@ -273,12 +302,12 @@ export default function MovementsPage() {
               <button
                 className="clear-filters"
                 onClick={() => {
-                setType('');
-                setCategory('');
-                const range = defaultDateRange();
-                setDateFrom(range.from);
-                setDateTo(range.to);
-                setSort({ field: 'date', direction: 'desc' });
+                  setType('');
+                  setCategory('');
+                  const range = defaultDateRange();
+                  setDateFrom(range.from);
+                  setDateTo(range.to);
+                  setSort({ field: 'date', direction: 'desc' });
                 }}
               >
                 Limpiar filtros
@@ -288,13 +317,36 @@ export default function MovementsPage() {
         </div>
       </section>
 
-      {error && !formOpen ? <div className="alert error" role="alert">{error}</div> : null}
-      {message ? <div className="alert success" role="status">{message}</div> : null}
+      {error && !formOpen ? (
+        <div className="alert error" role="alert">
+          {error}
+        </div>
+      ) : null}
+      {message ? (
+        <div className="alert success" role="status">
+          {message}
+        </div>
+      ) : null}
 
-      <div className="cards movement-summary">
-        <section className="card"><span>Ingresos visibles</span><strong className="positive">{money(totals.income)}</strong></section>
-        <section className="card"><span>Gastos visibles</span><strong className="negative">{money(totals.expensive)}</strong></section>
-        <section className="card"><span>Balance visible</span><strong>{money(totals.income - totals.expensive)}</strong></section>
+      <div className="cards movement-summary four-cards">
+        <section className="card">
+          <span>Ingresos visibles</span>
+          <strong className="positive">{money(totals.income)}</strong>
+        </section>
+        <section className="card">
+          <span>Gastos visibles</span>
+          <strong className="negative">{money(totals.expensive)}</strong>
+        </section>
+        <section className="card">
+          <span>Ahorros visibles</span>
+          <strong className="saving-value">{money(totals.saving)}</strong>
+        </section>
+        <section className="card">
+          <span>Disponible visible</span>
+          <strong>
+            {money(totals.income - totals.expensive - totals.saving)}
+          </strong>
+        </section>
       </div>
 
       <section className="panel">
@@ -307,18 +359,75 @@ export default function MovementsPage() {
         ) : (
           <div className="table-wrap">
             <table className="movements-table">
-              <thead><tr><th><button className={`sort-button ${sort.field === 'date' ? 'active' : ''}`} onClick={sortByDate}>Fecha <span aria-hidden="true">{sort.field === 'date' ? '↓' : ''}</span></button></th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th className="numeric"><button className={`sort-button ${sort.field === 'amount' ? 'active' : ''}`} onClick={sortByAmount}>Valor <span aria-hidden="true">{sort.field === 'amount' ? (sort.direction === 'desc' ? '↓' : '↑') : '↕'}</span></button></th><th aria-label="Acciones" /></tr></thead>
+              <thead>
+                <tr>
+                  <th>
+                    <button
+                      className={`sort-button ${sort.field === 'date' ? 'active' : ''}`}
+                      onClick={sortByDate}
+                    >
+                      Fecha{' '}
+                      <span aria-hidden="true">
+                        {sort.field === 'date' ? '↓' : ''}
+                      </span>
+                    </button>
+                  </th>
+                  <th>Descripción</th>
+                  <th>Tipo</th>
+                  <th>Categoría</th>
+                  <th className="numeric">
+                    <button
+                      className={`sort-button ${sort.field === 'amount' ? 'active' : ''}`}
+                      onClick={sortByAmount}
+                    >
+                      Valor{' '}
+                      <span aria-hidden="true">
+                        {sort.field === 'amount'
+                          ? sort.direction === 'desc'
+                            ? '↓'
+                            : '↑'
+                          : '↕'}
+                      </span>
+                    </button>
+                  </th>
+                  <th aria-label="Acciones" />
+                </tr>
+              </thead>
               <tbody>
-                {sortedRows.length ? sortedRows.map((row) => (
-                  <tr key={row.transaction_id}>
-                    <td className="nowrap">{date(row.transaction_date)}</td>
-                    <td className="strong">{row.description}</td>
-                    <td><span className={`type-badge ${row.type}`}>{row.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
-                    <td>{row.category}</td>
-                    <td className={`numeric strong ${row.type === 'income' ? 'positive' : 'negative'}`}>{money(Number(row.amount))}</td>
-                    <td><div className="row-actions"><button onClick={() => openEdit(row)}>Editar</button><button className="delete" onClick={() => void remove(row)}>Eliminar</button></div></td>
+                {sortedRows.length ? (
+                  sortedRows.map((row) => (
+                    <tr key={row.transaction_id}>
+                      <td className="nowrap">{date(row.transaction_date)}</td>
+                      <td className="strong">{row.description}</td>
+                      <td>
+                        <span className={`type-badge ${row.type}`}>
+                          {typeLabel(row.type)}
+                        </span>
+                      </td>
+                      <td>{row.category}</td>
+                      <td className={`numeric strong ${amountTone(row.type)}`}>
+                        {money(Number(row.amount))}
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button onClick={() => openEdit(row)}>Editar</button>
+                          <button
+                            className="delete"
+                            onClick={() => void remove(row)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="empty-cell">
+                      No hay movimientos con estos filtros.
+                    </td>
                   </tr>
-                )) : <tr><td colSpan={6} className="empty-cell">No hay movimientos con estos filtros.</td></tr>}
+                )}
               </tbody>
             </table>
           </div>
@@ -326,20 +435,126 @@ export default function MovementsPage() {
       </section>
 
       {formOpen ? (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false); }}>
-          <section className="transaction-modal" role="dialog" aria-modal="true" aria-labelledby="movement-form-title">
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setFormOpen(false);
+          }}
+        >
+          <section
+            className="transaction-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="movement-form-title"
+          >
             <div className="modal-heading">
-              <div><p className="eyebrow">Movimiento</p><h2 id="movement-form-title">{editingId ? 'Editar movimiento' : 'Nuevo movimiento'}</h2></div>
-              <button className="close-button" aria-label="Cerrar" onClick={() => setFormOpen(false)}>×</button>
+              <div>
+                <p className="eyebrow">Movimiento</p>
+                <h2 id="movement-form-title">
+                  {editingId ? 'Editar movimiento' : 'Nuevo movimiento'}
+                </h2>
+              </div>
+              <button
+                className="close-button"
+                aria-label="Cerrar"
+                onClick={() => setFormOpen(false)}
+              >
+                ×
+              </button>
             </div>
             <form className="transaction-form" onSubmit={save}>
-              <label>Tipo<select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as TransactionType })}><option value="income">Ingreso</option><option value="expensive">Gasto</option></select></label>
-              <label>Fecha<input type="date" required value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} /></label>
-              <label className="full-field">Descripción<input required maxLength={200} placeholder="Ej. Pago de nómina" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-              <label>Categoría<input required maxLength={100} list="movement-categories" placeholder="Ej. Salario" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} /><datalist id="movement-categories">{categories.map((item) => <option key={item} value={item} />)}</datalist></label>
-              <label>Valor (COP)<input type="number" required min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} /></label>
-              {error ? <div className="alert error full-field" role="alert">{error}</div> : null}
-              <div className="modal-actions full-field"><button type="button" className="ghost-button" onClick={() => setFormOpen(false)}>Cancelar</button><button className="primary-button" disabled={saving}>{saving ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Crear movimiento'}</button></div>
+              <label>
+                Tipo
+                <select
+                  value={form.type}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      type: event.target.value as TransactionType,
+                    })
+                  }
+                >
+                  <option value="income">Ingreso</option>
+                  <option value="expensive">Gasto</option>
+                  <option value="saving">Ahorro</option>
+                </select>
+              </label>
+              <label>
+                Fecha
+                <input
+                  type="date"
+                  required
+                  value={form.transaction_date}
+                  onChange={(event) =>
+                    setForm({ ...form, transaction_date: event.target.value })
+                  }
+                />
+              </label>
+              <label className="full-field">
+                Descripción
+                <input
+                  required
+                  maxLength={200}
+                  placeholder="Ej. Pago de nómina"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm({ ...form, description: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                Categoría
+                <input
+                  required
+                  maxLength={100}
+                  list="movement-categories"
+                  placeholder="Ej. Salario"
+                  value={form.category}
+                  onChange={(event) =>
+                    setForm({ ...form, category: event.target.value })
+                  }
+                />
+                <datalist id="movement-categories">
+                  {categories.map((item) => (
+                    <option key={item} value={item} />
+                  ))}
+                </datalist>
+              </label>
+              <label>
+                Valor (COP)
+                <input
+                  type="number"
+                  required
+                  min="0.01"
+                  step="0.01"
+                  value={form.amount}
+                  onChange={(event) =>
+                    setForm({ ...form, amount: event.target.value })
+                  }
+                />
+              </label>
+              {error ? (
+                <div className="alert error full-field" role="alert">
+                  {error}
+                </div>
+              ) : null}
+              <div className="modal-actions full-field">
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => setFormOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button className="primary-button" disabled={saving}>
+                  {saving
+                    ? 'Guardando…'
+                    : editingId
+                      ? 'Guardar cambios'
+                      : 'Crear movimiento'}
+                </button>
+              </div>
             </form>
           </section>
         </div>

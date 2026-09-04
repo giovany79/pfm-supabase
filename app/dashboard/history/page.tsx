@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { DashboardNav } from '../dashboard-nav';
+import { currentYearDateRange } from '@/lib/date-range';
 import { buildMonthlyComparison } from '@/lib/monthly-comparison';
 
 type MonthRow = { month: string; values: Record<string, number> };
@@ -22,7 +23,9 @@ type HistoryResponse = {
   months: string[];
   income: HistoryGroup;
   expense: HistoryGroup;
+  saving: HistoryGroup;
   row_count: number;
+  date_range: { from: string | null; to: string | null };
   error?: string;
 };
 
@@ -62,7 +65,7 @@ function HistoryChart({
   title: string;
   description: string;
   group: HistoryGroup;
-  tone: 'income' | 'expense';
+  tone: 'income' | 'expense' | 'saving';
 }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const topCategories = useMemo(() => {
@@ -104,10 +107,7 @@ function HistoryChart({
         </label>
       </div>
       {group.series.length && visibleCategories.length ? (
-        <div
-          className="history-chart"
-          style={{ height: 390, minHeight: 390 }}
-        >
+        <div className="history-chart" style={{ height: 390, minHeight: 390 }}>
           <ResponsiveContainer width="100%" height="100%">
             {selectedCategory ? (
               <LineChart
@@ -132,13 +132,22 @@ function HistoryChart({
                 />
                 <Tooltip
                   labelFormatter={(value) => monthLabel(String(value))}
-                  formatter={(value) => [money(Number(value)), selectedCategory]}
+                  formatter={(value) => [
+                    money(Number(value)),
+                    selectedCategory,
+                  ]}
                 />
                 <Line
                   type="monotone"
                   dataKey={(row: MonthRow) => row.values[selectedCategory] ?? 0}
                   name={selectedCategory}
-                  stroke={tone === 'income' ? '#12a66a' : '#e0524d'}
+                  stroke={
+                    tone === 'income'
+                      ? '#12a66a'
+                      : tone === 'saving'
+                        ? '#3157d5'
+                        : '#e0524d'
+                  }
                   strokeWidth={3}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
@@ -149,7 +158,11 @@ function HistoryChart({
                 data={group.series}
                 margin={{ top: 15, right: 20, bottom: 5, left: 5 }}
               >
-                <CartesianGrid stroke="#e8ebf0" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid
+                  stroke="#e8ebf0"
+                  strokeDasharray="3 3"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="month"
                   tickFormatter={monthLabel}
@@ -167,7 +180,10 @@ function HistoryChart({
                 />
                 <Tooltip
                   labelFormatter={(value) => monthLabel(String(value))}
-                  formatter={(value, name) => [money(Number(value)), String(name)]}
+                  formatter={(value, name) => [
+                    money(Number(value)),
+                    String(name),
+                  ]}
                 />
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
                 {visibleCategories.map((category, index) => (
@@ -201,7 +217,13 @@ function HistoryChart({
 
 function MonthlyComparisonChart({ data }: { data: HistoryResponse }) {
   const series = useMemo(
-    () => buildMonthlyComparison(data.months, data.income.series, data.expense.series),
+    () =>
+      buildMonthlyComparison(
+        data.months,
+        data.income.series,
+        data.expense.series,
+        data.saving.series,
+      ),
     [data],
   );
 
@@ -209,26 +231,79 @@ function MonthlyComparisonChart({ data }: { data: HistoryResponse }) {
     <section className="panel history-panel monthly-comparison-panel">
       <div className="history-heading">
         <div>
-          <h2>Ingresos vs. gastos por mes</h2>
-          <p>Comparación mensual de todos los movimientos registrados.</p>
+          <h2>Ingresos, gastos y ahorros por mes</h2>
+          <p>
+            Comparación mensual de todos los tipos de movimiento registrados.
+          </p>
         </div>
       </div>
       {series.length ? (
-        <div className="history-chart monthly-comparison-chart" style={{ height: 390, minHeight: 390 }}>
+        <div
+          className="history-chart monthly-comparison-chart"
+          style={{ height: 390, minHeight: 390 }}
+        >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={series} margin={{ top: 15, right: 20, bottom: 5, left: 5 }} barGap={4}>
-              <CartesianGrid stroke="#e8ebf0" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" tickFormatter={monthLabel} axisLine={false} tickLine={false} minTickGap={24} fontSize={11} />
-              <YAxis tickFormatter={(value) => compact.format(Number(value))} axisLine={false} tickLine={false} width={58} fontSize={11} />
-              <Tooltip labelFormatter={(value) => monthLabel(String(value))} formatter={(value, name) => [money(Number(value)), String(name)]} />
+            <BarChart
+              data={series}
+              margin={{ top: 15, right: 20, bottom: 5, left: 5 }}
+              barGap={4}
+            >
+              <CartesianGrid
+                stroke="#e8ebf0"
+                strokeDasharray="3 3"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="month"
+                tickFormatter={monthLabel}
+                axisLine={false}
+                tickLine={false}
+                minTickGap={24}
+                fontSize={11}
+              />
+              <YAxis
+                tickFormatter={(value) => compact.format(Number(value))}
+                axisLine={false}
+                tickLine={false}
+                width={58}
+                fontSize={11}
+              />
+              <Tooltip
+                labelFormatter={(value) => monthLabel(String(value))}
+                formatter={(value, name) => [
+                  money(Number(value)),
+                  String(name),
+                ]}
+              />
               <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
-              <Bar dataKey="income" name="Ingresos" fill="#12a66a" radius={[5, 5, 0, 0]} maxBarSize={38} />
-              <Bar dataKey="expense" name="Gastos" fill="#e0524d" radius={[5, 5, 0, 0]} maxBarSize={38} />
+              <Bar
+                dataKey="income"
+                name="Ingresos"
+                fill="#12a66a"
+                radius={[5, 5, 0, 0]}
+                maxBarSize={38}
+              />
+              <Bar
+                dataKey="expense"
+                name="Gastos"
+                fill="#e0524d"
+                radius={[5, 5, 0, 0]}
+                maxBarSize={38}
+              />
+              <Bar
+                dataKey="saving"
+                name="Ahorros"
+                fill="#3157d5"
+                radius={[5, 5, 0, 0]}
+                maxBarSize={38}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="empty-state compact">No hay movimientos para construir esta gráfica.</div>
+        <div className="empty-state compact">
+          No hay movimientos para construir esta gráfica.
+        </div>
       )}
     </section>
   );
@@ -238,11 +313,19 @@ export default function HistoryPage() {
   const [data, setData] = useState<HistoryResponse>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [range, setRange] = useState(currentYearDateRange);
+  const [appliedRange, setAppliedRange] = useState(currentYearDateRange);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
+      setError('');
       try {
-        const response = await fetch('/api/transaction-history');
+        const params = new URLSearchParams({
+          date_from: appliedRange.from,
+          date_to: appliedRange.to,
+        });
+        const response = await fetch(`/api/transaction-history?${params}`);
         const body = (await response.json()) as HistoryResponse;
         if (!response.ok) throw new Error(body.error);
         setData(body);
@@ -257,16 +340,35 @@ export default function HistoryPage() {
       }
     }
     void load();
-  }, []);
+  }, [appliedRange]);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAppliedRange({ ...range });
+  };
+
+  const resetCurrentYear = () => {
+    const nextRange = currentYearDateRange();
+    setRange(nextRange);
+    setAppliedRange(nextRange);
+  };
 
   const totals = useMemo(() => {
     const total = (group?: HistoryGroup) =>
       group?.series.reduce(
         (all, row) =>
-          all + Object.values(row.values).reduce((sum, value) => sum + Number(value), 0),
+          all +
+          Object.values(row.values).reduce(
+            (sum, value) => sum + Number(value),
+            0,
+          ),
         0,
       ) ?? 0;
-    return { income: total(data?.income), expense: total(data?.expense) };
+    return {
+      income: total(data?.income),
+      expense: total(data?.expense),
+      saving: total(data?.saving),
+    };
   }, [data]);
 
   return (
@@ -276,22 +378,80 @@ export default function HistoryPage() {
           <p className="eyebrow">Finanzas personales</p>
           <h1>Histórico</h1>
           <p className="subtitle">
-            Evolución mensual de tus ingresos y gastos por categoría.
+            Evolución mensual de tus ingresos, gastos y ahorros por categoría.
           </p>
         </div>
       </header>
       <DashboardNav />
 
+      <section className="filter-panel history-date-filter">
+        <form className="filters" onSubmit={submit}>
+          <label>
+            Desde
+            <input
+              type="date"
+              required
+              value={range.from}
+              max={range.to}
+              onChange={(event) =>
+                setRange({ ...range, from: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Hasta
+            <input
+              type="date"
+              required
+              value={range.to}
+              min={range.from}
+              onChange={(event) =>
+                setRange({ ...range, to: event.target.value })
+              }
+            />
+          </label>
+          <button className="primary-button" disabled={loading}>
+            {loading ? 'Cargando…' : 'Aplicar periodo'}
+          </button>
+          <button
+            type="button"
+            className="clear-filters"
+            onClick={resetCurrentYear}
+          >
+            Año actual
+          </button>
+        </form>
+      </section>
+
       {loading ? (
         <div className="loading-state">Construyendo histórico financiero…</div>
       ) : error ? (
-        <div className="alert error" role="alert">{error}</div>
+        <div className="alert error" role="alert">
+          {error}
+        </div>
       ) : data ? (
         <>
-          <div className="cards history-summary">
-            <section className="card"><span>Ingresos históricos</span><strong className="positive">{money(totals.income)}</strong></section>
-            <section className="card"><span>Gastos históricos</span><strong className="negative">{money(totals.expense)}</strong></section>
-            <section className="card"><span>Movimientos analizados</span><strong>{data.row_count.toLocaleString('es-CO')}</strong><p>{data.months.length} meses con información</p></section>
+          <div className="cards history-summary four-cards">
+            <section className="card">
+              <span>Ingresos históricos</span>
+              <strong className="positive">{money(totals.income)}</strong>
+            </section>
+            <section className="card">
+              <span>Gastos históricos</span>
+              <strong className="negative">{money(totals.expense)}</strong>
+            </section>
+            <section className="card">
+              <span>Ahorros históricos</span>
+              <strong className="saving-value">{money(totals.saving)}</strong>
+            </section>
+            <section className="card">
+              <span>Movimientos analizados</span>
+              <strong>{data.row_count.toLocaleString('es-CO')}</strong>
+              <p>
+                {data.months.length} meses con información · {appliedRange.from}{' '}
+                a {appliedRange.to}
+              </p>
+            </section>
           </div>
           <MonthlyComparisonChart data={data} />
           <HistoryChart
@@ -305,6 +465,12 @@ export default function HistoryPage() {
             description="Composición mensual de los gastos"
             group={data.expense}
             tone="expense"
+          />
+          <HistoryChart
+            title="Histórico de ahorros"
+            description="Composición mensual de los ahorros"
+            group={data.saving}
+            tone="saving"
           />
         </>
       ) : null}

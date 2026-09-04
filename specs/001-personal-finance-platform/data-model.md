@@ -33,13 +33,13 @@ the date-range and category/kind filtering required by FR-005 and the dashboard.
 
 ## Entity: `transactions` (Transaction)
 
-A single income or expense event. Source: `pfm-gio.csv`.
+A single income, expense, or saving event. Source: `pfm-gio.csv` and dashboard/API writes.
 
 | Column | Type | Source column | Notes |
 |---|---|---|---|
 | `transaction_id` | `uuid` (PK) | `transaction_id` | Natural key from source; used for idempotent upsert |
 | `description` | `text` | `Description` | |
-| `type` | `text` | `Income/expensive` | `income` \| `expensive` as literally recorded in source (constitution: column semantics mapped explicitly, not silently reinterpreted — see Assumptions in spec.md re: the source's literal category values) |
+| `type` | `text` | `Income/expensive` | `income` \| `expensive` \| `saving`; the migration promotes legacy expense rows categorized as `saving` or `savings` to the dedicated type |
 | `amount` | `numeric(14,2)` | `Amount` | Preserved at source precision |
 | `category` | `text` | `Category` | Free text, e.g. `health` |
 | `transaction_date` | `date` | `Date` | Renamed from source `Date` to avoid the reserved word `date` as a bare column name |
@@ -49,9 +49,9 @@ A single income or expense event. Source: `pfm-gio.csv`.
 **Validation rules** (FR-003):
 - `transaction_date` must parse as a valid date
 - `amount` must parse as a number
-- `type` must be one of `income` / `expensive` (the source's literal values — not
-  normalized to `income`/`expense`, to avoid silently reinterpreting the source per
-  constitution Principle I; the application layer labels these for display)
+- `type` must be one of `income` / `expensive` / `saving`. Migration 0003 preserves
+  historical fields and reclassifies only legacy expenses whose normalized category is
+  exactly `saving` or `savings`.
 - `transaction_id`, `description`, `category` must be non-empty
 
 **Indexes**: `(owner_id, transaction_date)`, `(owner_id, category)`, `(owner_id, type)`.

@@ -27,14 +27,14 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 ```json
 {
   "name": "query_transactions",
-  "description": "Retrieve income/expense transactions matching the given filters. Use this to answer questions about specific transactions, spending in a category or date range, or to list matching records. Returns matching rows and the total count. Returns an empty result (not an error) when nothing matches. IMPORTANT: base your answer only on the rows returned here; if row_count is 0, state plainly that there is no matching data rather than guessing.",
+  "description": "Retrieve income, expense, or saving transactions matching the given filters. Use this to answer questions about specific transactions, spending or savings in a category or date range, or to list matching records. Returns matching rows and the total count. Returns an empty result (not an error) when nothing matches. IMPORTANT: base your answer only on the rows returned here; if row_count is 0, state plainly that there is no matching data rather than guessing.",
   "input_schema": {
     "type": "object",
     "properties": {
       "date_from": { "type": "string", "format": "date", "description": "Inclusive start date (YYYY-MM-DD). Omit for no lower bound." },
       "date_to": { "type": "string", "format": "date", "description": "Inclusive end date (YYYY-MM-DD). Omit for no upper bound." },
       "category": { "type": "string", "description": "Exact category match, e.g. 'health'. Omit for all categories." },
-      "type": { "type": "string", "enum": ["income", "expensive"], "description": "Filter to income or expense transactions only. Omit for both." },
+      "type": { "type": "string", "enum": ["income", "expensive", "saving"], "description": "Filter to income, expense, or saving transactions. Omit for all types." },
       "limit": { "type": "integer", "description": "Max rows to return, default 100, max 500 — use aggregate_transactions instead of a high limit for totals/sums." }
     },
     "additionalProperties": false
@@ -73,7 +73,7 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
       "group_by": { "type": "string", "enum": ["category", "month"], "description": "Dimension to aggregate by." },
       "date_from": { "type": "string", "format": "date" },
       "date_to": { "type": "string", "format": "date" },
-      "type": { "type": "string", "enum": ["income", "expensive"], "description": "Omit to aggregate both income and expenses together — callers should usually set this explicitly to avoid mixing signs." }
+      "type": { "type": "string", "enum": ["income", "expensive", "saving"], "description": "Omit to aggregate all transaction types together — callers should usually set this explicitly." }
     },
     "required": ["group_by"],
     "additionalProperties": false
@@ -96,7 +96,7 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
       "description": { "type": "string", "description": "Required for create; include for edit only if changing." },
       "amount": { "type": "number", "description": "Required for create; include for edit only if changing." },
       "category": { "type": "string", "description": "Required for create; include for edit only if changing." },
-      "type_income_expense": { "type": "string", "enum": ["income", "expensive"], "description": "Required for create; include for edit only if changing." }
+      "type_income_expense": { "type": "string", "enum": ["income", "expensive", "saving"], "description": "Required for create; include for edit only if changing." }
     },
     "required": ["operation"],
     "additionalProperties": false
@@ -126,7 +126,7 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
             "description": { "type": "string", "minLength": 1 },
             "amount": { "type": "number", "minimum": 0 },
             "category": { "type": "string", "minLength": 1 },
-            "type_income_expense": { "type": "string", "enum": ["income", "expensive"] }
+            "type_income_expense": { "type": "string", "enum": ["income", "expensive", "saving"] }
           },
           "required": ["date", "description", "amount", "category", "type_income_expense"],
           "additionalProperties": false

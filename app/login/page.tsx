@@ -22,7 +22,7 @@ export default async function LoginPage({
           <h1>Tu información financiera, clara y bajo control.</h1>
           <p className="login-intro">
             Consulta tu patrimonio, administra movimientos y entiende la evolución de
-            tus ingresos y gastos desde un solo lugar.
+            tus ingresos, gastos y ahorros desde un solo lugar.
           </p>
         </div>
         <div className="login-benefits" aria-label="Características">

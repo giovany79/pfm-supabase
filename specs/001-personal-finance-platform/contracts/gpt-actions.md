@@ -45,13 +45,13 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
 ```json
 {
   "openapi": "3.1.0",
-  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.3.1" },
+  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.4.0" },
   "servers": [{ "url": "https://<deployed-host>/api/actions" }],
   "paths": {
     "/query-transactions": {
       "post": {
         "operationId": "queryTransactions",
-        "summary": "Retrieve income/expense transactions matching filters. Base your answer only on the returned rows; if row_count is 0, say there is no matching data.",
+        "summary": "Retrieve income, expense, or saving transactions matching filters. Base your answer only on the returned rows; if row_count is 0, say there is no matching data.",
         "requestBody": {
           "required": false,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/QueryTransactionsInput" } } }
@@ -153,7 +153,7 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
 ## Custom GPT configuration (manual, one-time, done in the ChatGPT UI — not code)
 
 1. Create a new GPT in ChatGPT → Configure → Actions → "Import from URL" →
-   `https://<deployed-host>/api/actions/openapi.json?v=1.3.1`.
+   `https://<deployed-host>/api/actions/openapi.json?v=1.4.0`.
 2. Authentication → API Key → Bearer → paste `MCP_ACTIONS_API_KEY`.
 3. GPT **Instructions** field (the closest equivalent to the original in-app system
    prompt): *"You answer questions about Gio's personal finances; you can create, edit, or
@@ -172,7 +172,7 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
    again. If confirmTransactionChange returns outcome: failure with reason: expired, tell
    Gio the confirmation window passed and restate the proposed change before asking again.
    For a new transaction, always collect date, description, amount, category, and type
-   (income or expense) before calling proposeTransactionChange — ask for anything missing,
+   (`income`, `expensive`, or `saving`) before calling proposeTransactionChange — ask for anything missing,
    never infer or default it. For 2 to 20 new transactions, collect all five fields for
    every row, call proposeTransactionBatch exactly once with the complete batch, show every
    returned transaction and the batch total, and ask one question confirming the entire

@@ -35,7 +35,7 @@ const openApiSchema = {
   openapi: '3.1.0',
   info: {
     title: 'PFM Supabase Actions',
-    version: '1.3.1',
+    version: '1.4.0',
     description:
       'Grounded access to Gio personal-finance transactions, assets, liabilities, and calculated net worth, including two-step confirmed mutation workflows.',
   },
@@ -45,7 +45,7 @@ const openApiSchema = {
     '/query-transactions': {
       post: {
         operationId: 'queryTransactions',
-        summary: 'Query income and expense transactions',
+        summary: 'Query income, expense, and saving transactions',
         description:
           'Returns transactions matching typed filters. Base answers only on returned rows and report plainly when row_count is zero.',
         security: authenticated,
@@ -168,8 +168,8 @@ const openApiSchema = {
           },
           type: {
             type: 'string',
-            enum: ['income', 'expensive'],
-            description: 'Filter to income or expense transactions.',
+            enum: ['income', 'expensive', 'saving'],
+            description: 'Filter to income, expense, or saving transactions.',
           },
           limit: {
             type: 'integer',
@@ -187,7 +187,8 @@ const openApiSchema = {
           as_of_date: {
             type: 'string',
             format: 'date',
-            description: 'Return the most recent item snapshots on or before this date.',
+            description:
+              'Return the most recent item snapshots on or before this date.',
           },
           kind: { type: 'string', enum: ['asset', 'liability'] },
           category: { type: 'string', minLength: 1 },
@@ -201,7 +202,7 @@ const openApiSchema = {
           group_by: { type: 'string', enum: ['category', 'month'] },
           date_from: { type: 'string', format: 'date' },
           date_to: { type: 'string', format: 'date' },
-          type: { type: 'string', enum: ['income', 'expensive'] },
+          type: { type: 'string', enum: ['income', 'expensive', 'saving'] },
         },
         required: ['group_by'],
         additionalProperties: false,
@@ -221,7 +222,7 @@ const openApiSchema = {
           category: { type: 'string', minLength: 1 },
           type_income_expense: {
             type: 'string',
-            enum: ['income', 'expensive'],
+            enum: ['income', 'expensive', 'saving'],
           },
         },
         required: ['operation'],
@@ -236,7 +237,7 @@ const openApiSchema = {
           category: { type: 'string', minLength: 1 },
           type_income_expense: {
             type: 'string',
-            enum: ['income', 'expensive'],
+            enum: ['income', 'expensive', 'saving'],
           },
         },
         required: [
@@ -287,7 +288,15 @@ const openApiSchema = {
           institution: { type: ['string', 'null'], maxLength: 160 },
           notes: { type: ['string', 'null'], maxLength: 500 },
         },
-        required: ['operation', 'snapshot_date', 'name', 'kind', 'category', 'amount', 'currency'],
+        required: [
+          'operation',
+          'snapshot_date',
+          'name',
+          'kind',
+          'category',
+          'amount',
+          'currency',
+        ],
         additionalProperties: false,
       },
       ConfirmSnapshotChangeInput: {
@@ -303,7 +312,7 @@ const openApiSchema = {
         properties: {
           transaction_id: { type: 'string', format: 'uuid' },
           description: { type: 'string' },
-          type: { type: 'string', enum: ['income', 'expensive'] },
+          type: { type: 'string', enum: ['income', 'expensive', 'saving'] },
           amount: { type: 'number' },
           category: { type: 'string' },
           transaction_date: { type: 'string', format: 'date' },

@@ -34,4 +34,19 @@ describe('transaction input validation', () => {
       parseTransactionInput({ ...base, transaction_date: '17/08/2026' }),
     ).toThrow();
   });
+
+  it('accepts saving as a movement type', () => {
+    expect(
+      parseTransactionInput({
+        description: 'Fondo de emergencia',
+        type: 'saving',
+        amount: 300000,
+        category: 'emergency_fund',
+        transaction_date: '2026-09-04',
+      }),
+    ).toMatchObject({
+      type_income_expense: 'saving',
+      amount: 300000,
+    });
+  });
 });

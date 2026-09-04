@@ -58,8 +58,16 @@ button:disabled {
   overflow: hidden;
   padding: clamp(2.5rem, 6vw, 5rem);
   background:
-    radial-gradient(circle at 85% 15%, rgba(132, 160, 255, 0.35), transparent 28%),
-    radial-gradient(circle at 15% 90%, rgba(32, 194, 139, 0.2), transparent 32%),
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(132, 160, 255, 0.35),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 15% 90%,
+      rgba(32, 194, 139, 0.2),
+      transparent 32%
+    ),
     linear-gradient(145deg, #152965 0%, #2447b2 52%, #3157d5 100%);
   color: #fff;
 }
@@ -147,8 +155,7 @@ button:disabled {
   gap: 1.5rem;
   padding: clamp(2rem, 7vw, 6rem);
   background:
-    radial-gradient(circle at 100% 0%, #f1f4ff 0, transparent 28%),
-    #f8f9fc;
+    radial-gradient(circle at 100% 0%, #f1f4ff 0, transparent 28%), #f8f9fc;
 }
 .login-card {
   width: min(440px, 100%);
@@ -201,7 +208,9 @@ button:disabled {
   outline: none;
   background: #fff;
   color: var(--ink);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 .login-form input[name='email'] {
   padding-right: 0.9rem;
@@ -268,7 +277,9 @@ button:disabled {
   color: #fff;
   font-weight: 800;
   box-shadow: 0 9px 20px rgba(49, 87, 213, 0.2);
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 .login-submit:hover:not(:disabled) {
   transform: translateY(-1px);
@@ -307,7 +318,9 @@ button:disabled {
   font-size: 0.74rem;
 }
 @keyframes login-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .dashboard-shell {
   display: grid;
@@ -431,6 +444,18 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
+}
+.four-cards,
+.metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.three-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+.saving-value {
+  color: #3157d5;
 }
 .card {
   min-height: 145px;
@@ -648,6 +673,11 @@ tbody tr:hover {
   background: #fef3f2;
   color: #b42318;
 }
+.type-filter button.active.saving {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #2949b4;
+}
 .category-filter,
 .date-filter,
 .transaction-form label {
@@ -732,6 +762,10 @@ tbody tr:hover {
 .type-badge.expensive {
   background: #fef3f2;
   color: #b42318;
+}
+.type-badge.saving {
+  background: #eef2ff;
+  color: #2949b4;
 }
 .nowrap {
   white-space: nowrap;
@@ -872,6 +906,9 @@ tbody tr:hover {
 .history-summary .card {
   min-height: 120px;
 }
+.history-date-filter {
+  margin-bottom: 1.25rem;
+}
 .history-summary .card strong {
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
 }
@@ -927,7 +964,11 @@ tbody tr:hover {
   margin-bottom: 1.25rem;
 }
 .monthly-comparison-chart {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.7), rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 250, 252, 0.7),
+    rgba(255, 255, 255, 0)
+  );
 }
 .snapshot-history-grid {
   display: grid;
@@ -980,7 +1021,8 @@ tbody tr:hover {
     flex-wrap: wrap;
   }
   .cards,
-  .two-columns {
+  .two-columns,
+  .three-columns {
     grid-template-columns: 1fr;
   }
   .filters label,
@@ -1002,7 +1044,7 @@ tbody tr:hover {
   }
   .type-filter {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
   .category-filter select {
     width: 100%;

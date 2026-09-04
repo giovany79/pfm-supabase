@@ -30,7 +30,7 @@
 ### User Story 1 - Centralize and query personal finance data (Priority: P1)
 
 Gio has his personal finance history spread across two spreadsheet files — one tracking
-assets and liabilities over time, one tracking income and expense transactions. He wants
+assets and liabilities over time, one tracking income, expense, and saving transactions. He wants
 all of that data migrated into one centralized, queryable store so he can stop opening
 spreadsheets to answer questions like "how much did I spend on health last month?" or
 "what's the current split between my assets and liabilities?".
@@ -303,7 +303,7 @@ figure.
   post-`/speckit-analyze`, finding I1, to match the already-implemented design in
   research.md R8 §8.5).
 - **FR-024**: The authenticated dashboard MUST provide a transaction-management section
-  that lists income and expense details and permits creation, update, and permanent
+  that lists income, expense, and saving details and permits creation, update, and permanent
   deletion under the same owner-scoped RLS policies as other dashboard reads.
 - **FR-025**: The transaction-management section MUST filter by type, category, and
   inclusive date range. Its initial range MUST run from the first day of the current local
@@ -313,11 +313,13 @@ figure.
   restore date-descending order.
 - **FR-027**: The category selector MUST include every distinct category owned by Gio,
   even when the transaction table exceeds Supabase's per-request row limit.
-- **FR-028**: The dashboard MUST provide an all-time monthly history for both income and
-  expenses by category. It MUST process every transaction through pagination, show the
+- **FR-028**: The dashboard MUST provide an all-time monthly history for income,
+  expenses, and savings by category. It MUST process every transaction through pagination, show the
   principal categories together, and allow any individual category to be selected for a
   focused trend chart. It MUST also show a grouped monthly histogram comparing total
-  income in green against total expenses in red.
+  income in green, total expenses in red, and total savings in blue. Every historical metric and chart MUST
+  respect an inclusive date filter that defaults to January 1 through today of the current
+  year.
 - **FR-029**: The authenticated dashboard MUST provide an asset/liability management
   section that lists current snapshot records and permits Gio to create or update them,
   including snapshot date, name, kind, category, amount, currency, institution, and notes.

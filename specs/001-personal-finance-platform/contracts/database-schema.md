@@ -30,12 +30,12 @@ create policy "owner full access" on snapshots
   using (owner_id = auth.uid())
   with check (owner_id = auth.uid());
 
--- transactions: income/expense events (source: pfm-gio.csv)
+-- transactions: income/expense/saving events (source: pfm-gio.csv and application writes)
 create table transactions (
   transaction_id uuid primary key,
   owner_id uuid not null references auth.users(id),
   description text not null,
-  type text not null check (type in ('income', 'expensive')),
+  type text not null check (type in ('income', 'expensive', 'saving')),
   amount numeric(14,2) not null,
   category text not null,
   transaction_date date not null,

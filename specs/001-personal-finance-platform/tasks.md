@@ -369,6 +369,8 @@ Task: "Implement the GPT Action REST endpoints in app/api/actions/*/route.ts"
 - [X] T077 [P] Add validation, proposal/confirmation, MCP, OpenAPI, and audit privacy regression tests
 - [X] T078 [US2] Add owner-scoped snapshot history aggregation and general/per-item charts to `/dashboard/net-worth`, keeping currencies separate and carrying forward the latest valuation
 - [X] T079 [US2] Add a monthly grouped histogram to `/dashboard/history` comparing total income in green against total expenses in red
+- [X] T080 [US2] Add an inclusive historical date filter defaulting to the current year and apply it to every summary and chart in `/dashboard/history`
+- [X] T081 [US2] Add `saving` as a first-class transaction type across database, dashboard, APIs, MCP, and GPT Actions; separate legacy saving-category expenses and show savings in blue in the monthly histogram
 
 ## Notes
 

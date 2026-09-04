@@ -1,24 +1,24 @@
 # PFM Supabase
 
 Plataforma personal de finanzas construida con Next.js 15 y Supabase. Centraliza
-activos, pasivos, ingresos y gastos; ofrece visualización histórica y permite consultar
+activos, pasivos, ingresos, gastos y ahorros; ofrece visualización histórica y permite consultar
 o modificar movimientos, activos y pasivos desde el dashboard y desde integraciones autenticadas.
 
 ## Funcionalidades
 
 - Migración idempotente de `balance-sheet.csv` y `pfm-gio.csv`.
 - Autenticación del único propietario mediante Supabase Auth y sesiones con cookies.
-- Dashboard con patrimonio neto en COP, activos, pasivos, ingresos y gastos.
-- Tablas de patrimonio y gráficas de ingresos/gastos por categoría.
-- Administración de movimientos con creación, edición y eliminación.
+- Dashboard con patrimonio neto en COP, activos, pasivos, ingresos, gastos y ahorros.
+- Tablas de patrimonio y gráficas de ingresos, gastos y ahorros por categoría.
+- Administración de movimientos de tipo `income`, `expensive` o `saving`, con creación, edición y eliminación.
 - Administración de activos y pasivos con creación y edición; el patrimonio se recalcula automáticamente.
 - Histórico patrimonial general por moneda y evolución individual de cada activo o pasivo.
 - Filtros de movimientos por tipo, categoría y rango de fechas.
 - Rango inicial del mes actual: primer día del mes hasta la fecha vigente.
 - Orden cronológico descendente y orden alternable por valor.
-- Histórico mensual de ingresos y gastos, con barras por categorías principales y
+- Histórico mensual de ingresos, gastos y ahorros, con barras por categorías principales y
   gráfica de línea para una categoría seleccionada, además de una comparación mensual
-  de ingresos en verde frente a gastos en rojo.
+  de ingresos en verde, gastos en rojo y ahorros en azul.
 - Administración manual de tasas de cambio hacia COP.
 - Herramientas autenticadas para ChatGPT Actions y un servidor MCP opcional.
 - RLS en todas las tablas financieras y separación del cliente `service_role`.
@@ -27,10 +27,10 @@ o modificar movimientos, activos y pasivos desde el dashboard y desde integracio
 
 | Ruta | Descripción |
 | --- | --- |
-| `/dashboard` | Resumen de patrimonio, ingresos, gastos y composición por categoría. |
+| `/dashboard` | Resumen de patrimonio, ingresos, gastos, ahorros y composición por categoría. |
 | `/dashboard/net-worth` | Detalle, administración e histórico general e individual de activos y pasivos por moneda. |
-| `/dashboard/movements` | Detalle y CRUD de ingresos y gastos con filtros y ordenamiento. |
-| `/dashboard/history` | Histórico mensual de ingresos y gastos por categoría. |
+| `/dashboard/movements` | Detalle y CRUD de ingresos, gastos y ahorros con filtros y ordenamiento. |
+| `/dashboard/history` | Histórico mensual de ingresos, gastos y ahorros por categoría. |
 | `/dashboard/settings` | Configuración manual de tasas de cambio a COP. |
 
 Todas las rutas bajo `/dashboard` requieren una sesión válida del propietario.
@@ -217,7 +217,7 @@ Nunca se divide un lote en propuestas o confirmaciones individuales.
 
 1. En ChatGPT, crea o edita un GPT y abre **Configure → Actions**.
 2. Elige **Import from URL** e importa
-   `https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.3.1`.
+   `https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.4.0`.
 3. En **Authentication**, selecciona **API Key** y el tipo **Bearer**. Pega como secreto el
    valor de `MCP_ACTIONS_API_KEY`; no incluyas el prefijo `Bearer` dentro del valor.
 4. Copia en **Instructions** el texto canónico de

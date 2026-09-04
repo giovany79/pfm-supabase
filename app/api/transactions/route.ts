@@ -44,7 +44,7 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const rawType = params.get('type');
     const type =
-      rawType === 'income' || rawType === 'expensive'
+      rawType === 'income' || rawType === 'expensive' || rawType === 'saving'
         ? (rawType as TransactionType)
         : undefined;
     const category = params.get('category')?.trim() || undefined;
@@ -63,7 +63,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ ...result, categories });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'No fue posible consultar los movimientos.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No fue posible consultar los movimientos.',
+      },
       { status: 400 },
     );
   }
@@ -79,7 +84,12 @@ export async function POST(request: Request) {
     return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'No fue posible crear el movimiento.' },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No fue posible crear el movimiento.',
+      },
       { status: 400 },
     );
   }

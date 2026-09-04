@@ -144,6 +144,8 @@ Both operations are scoped to `auth.uid()` through RLS.
 
 Reads all transactions in pages of 500 and aggregates values by calendar month, type, and
 category for `/dashboard/history`. Unlike the detail route, it processes the full history.
+It accepts inclusive `date_from` and `date_to` query parameters in `YYYY-MM-DD` format;
+the response includes the applied `date_range`.
 
 ```json
 {

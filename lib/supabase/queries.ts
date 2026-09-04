@@ -154,6 +154,9 @@ export async function dashboardMetrics(
   const incomeRows = transactions.rows.filter(
     (r: Transaction) => r.type === 'income',
   );
+  const savingRows = transactions.rows.filter(
+    (r: Transaction) => r.type === 'saving',
+  );
   const totalsByCategory = (rows: Transaction[]) =>
     Object.values(
       rows.reduce(
@@ -170,6 +173,7 @@ export async function dashboardMetrics(
     );
   const spending = totalsByCategory(expenseRows);
   const incomeByCategory = totalsByCategory(incomeRows);
+  const savingsByCategory = totalsByCategory(savingRows);
   const categoryTotals = (kind: 'asset' | 'liability') =>
     snapshots.rows
       .filter((row) => row.kind === kind)
@@ -200,9 +204,14 @@ export async function dashboardMetrics(
         (n: number, r: Transaction) => n + Number(r.amount),
         0,
       ),
+      saving: savingRows.reduce(
+        (n: number, r: Transaction) => n + Number(r.amount),
+        0,
+      ),
     },
     income_by_category: incomeByCategory,
     spending_by_category: spending,
+    savings_by_category: savingsByCategory,
     date_range: { from: dateFrom ?? null, to: dateTo ?? null },
     has_data: snapshots.row_count > 0 || transactions.row_count > 0,
   };

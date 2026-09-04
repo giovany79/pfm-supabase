@@ -30,9 +30,10 @@ type Metrics = {
   };
   assets_by_category: CategoryRow[];
   liabilities_by_category: CategoryRow[];
-  income_vs_expense: { income: number; expense: number };
+  income_vs_expense: { income: number; expense: number; saving: number };
   income_by_category: SpendingRow[];
   spending_by_category: SpendingRow[];
+  savings_by_category: SpendingRow[];
   has_data: boolean;
 };
 
@@ -217,7 +218,7 @@ export default function Dashboard() {
           <p className="eyebrow">Finanzas personales</p>
           <h1>Dashboard</h1>
           <p className="subtitle">
-            Una vista clara de tu patrimonio, ingresos y gastos.
+            Una vista clara de tu patrimonio, ingresos, gastos y ahorros.
           </p>
         </div>
         <div className="header-actions">
@@ -296,6 +297,13 @@ export default function Dashboard() {
               </strong>
               <p>COP en el periodo</p>
             </section>
+            <section className="card">
+              <span>Ahorros</span>
+              <strong className="saving-value">
+                {number(data.income_vs_expense.saving)}
+              </strong>
+              <p>COP en el periodo</p>
+            </section>
           </div>
           {data.net_worth.unconverted_currencies.length ? (
             <div className="alert warning">
@@ -353,7 +361,7 @@ export default function Dashboard() {
               rows={data.liabilities_by_category}
             />
           </div>
-          <div className="two-columns chart-grid">
+          <div className="three-columns chart-grid">
             <CategoryChart
               title="Ingresos por categoría"
               subtitle="De mayor a menor"
@@ -365,6 +373,12 @@ export default function Dashboard() {
               subtitle="De mayor a menor"
               rows={data.spending_by_category}
               color="#e0524d"
+            />
+            <CategoryChart
+              title="Ahorros por categoría"
+              subtitle="De mayor a menor"
+              rows={data.savings_by_category}
+              color="#3157d5"
             />
           </div>
           {data.net_worth.rates_used.length ? (

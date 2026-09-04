@@ -130,7 +130,7 @@ that surface, it does not block validation.
 
 **6a. ChatGPT Custom GPT (mandatory)**: follow the repository setup guide in
 [README.md](../../README.md#chatgpt-setup). Import
-`https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.3.1`, configure API Key/Bearer with
+`https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.4.0`, configure API Key/Bearer with
 the value of `MCP_ACTIONS_API_KEY`, and paste the canonical Instructions from
 [gpt-actions.md](contracts/gpt-actions.md#custom-gpt-configuration).
 Ask: *"How much did I spend on health in [a month with a known health transaction]?"*

@@ -16,15 +16,19 @@ export function parseTransactionInput(input: TransactionInput): ProposedChange {
   const type = input.type as TransactionType;
 
   if (!description || description.length > 200) {
-    throw new Error('La descripción es obligatoria y admite hasta 200 caracteres.');
+    throw new Error(
+      'La descripción es obligatoria y admite hasta 200 caracteres.',
+    );
   }
   if (!category || category.length > 100) {
-    throw new Error('La categoría es obligatoria y admite hasta 100 caracteres.');
+    throw new Error(
+      'La categoría es obligatoria y admite hasta 100 caracteres.',
+    );
   }
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('El valor debe ser un número mayor que cero.');
   }
-  if (type !== 'income' && type !== 'expensive') {
+  if (type !== 'income' && type !== 'expensive' && type !== 'saving') {
     throw new Error('El tipo de movimiento no es válido.');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(transactionDate)) {
