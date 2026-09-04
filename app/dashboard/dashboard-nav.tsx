@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const links = [
   { href: '/dashboard', label: 'Resumen' },
+  { href: '/dashboard/net-worth', label: 'Activos y pasivos' },
   { href: '/dashboard/movements', label: 'Ingresos y gastos' },
   { href: '/dashboard/history', label: 'Histórico' },
   { href: '/dashboard/settings', label: 'Tasas de cambio' },

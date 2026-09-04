@@ -18,7 +18,7 @@ test.describe('deployed MCP and Actions endpoints', () => {
     expect(action.status()).toBe(401);
   });
 
-  test('initializes and exposes six typed MCP tools', async ({ request }) => {
+  test('initializes and exposes eight typed MCP tools', async ({ request }) => {
     const initialized = await request.post(`${baseUrl}/api/mcp`, {
       headers: mcpHeaders,
       data: {
@@ -42,7 +42,7 @@ test.describe('deployed MCP and Actions endpoints', () => {
     });
     expect(listed.ok()).toBe(true);
     const listBody = await listed.json();
-    expect(listBody.result.tools).toHaveLength(6);
+    expect(listBody.result.tools).toHaveLength(8);
     expect(listBody.result.tools.every((tool: { inputSchema?: { type?: string } }) => tool.inputSchema?.type === 'object')).toBe(true);
   });
 

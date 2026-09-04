@@ -35,9 +35,9 @@ const openApiSchema = {
   openapi: '3.1.0',
   info: {
     title: 'PFM Supabase Actions',
-    version: '1.2.1',
+    version: '1.3.1',
     description:
-      'Grounded access to Gio personal-finance transactions and snapshots, including a two-step confirmed mutation workflow.',
+      'Grounded access to Gio personal-finance transactions, assets, liabilities, and calculated net worth, including two-step confirmed mutation workflows.',
   },
   servers: [{ url: 'https://pfm-supabase.vercel.app/api/actions' }],
   security: authenticated,
@@ -112,6 +112,30 @@ const openApiSchema = {
         'x-openai-isConsequential': true,
         requestBody: requestBody('ConfirmTransactionChangeInput'),
         responses: responses('ConfirmTransactionChangeResult'),
+      },
+    },
+    '/propose-snapshot-change': {
+      post: {
+        operationId: 'proposeSnapshotChange',
+        summary: 'Propose creating or editing an asset or liability',
+        description:
+          'Creates one five-minute proposal without changing data. For edits, call querySnapshots first and resolve exactly one item_id. Show every proposed field and ask for explicit confirmation. Net worth is calculated from assets minus liabilities and cannot be edited directly.',
+        security: authenticated,
+        'x-openai-isConsequential': false,
+        requestBody: requestBody('ProposeSnapshotChangeInput'),
+        responses: responses('ProposeSnapshotChangeResult'),
+      },
+    },
+    '/confirm-snapshot-change': {
+      post: {
+        operationId: 'confirmSnapshotChange',
+        summary: 'Apply an explicitly confirmed asset or liability change',
+        description:
+          'Applies one pending asset or liability proposal only after the user explicitly confirms its exact summary and fields in the immediately following message. Never use it with a transaction proposal.',
+        security: authenticated,
+        'x-openai-isConsequential': true,
+        requestBody: requestBody('ConfirmSnapshotChangeInput'),
+        responses: responses('ConfirmSnapshotChangeResult'),
       },
     },
   },
@@ -238,6 +262,35 @@ const openApiSchema = {
         additionalProperties: false,
       },
       ConfirmTransactionChangeInput: {
+        type: 'object',
+        properties: {
+          pending_change_id: { type: 'string', format: 'uuid' },
+        },
+        required: ['pending_change_id'],
+        additionalProperties: false,
+      },
+      ProposeSnapshotChangeInput: {
+        type: 'object',
+        properties: {
+          operation: { type: 'string', enum: ['create', 'edit'] },
+          target_item_id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Required for edit operations.',
+          },
+          snapshot_date: { type: 'string', format: 'date' },
+          name: { type: 'string', minLength: 1, maxLength: 160 },
+          kind: { type: 'string', enum: ['asset', 'liability'] },
+          category: { type: 'string', minLength: 1, maxLength: 100 },
+          amount: { type: 'number', minimum: 0 },
+          currency: { type: 'string', pattern: '^[A-Za-z]{3,10}$' },
+          institution: { type: ['string', 'null'], maxLength: 160 },
+          notes: { type: ['string', 'null'], maxLength: 500 },
+        },
+        required: ['operation', 'snapshot_date', 'name', 'kind', 'category', 'amount', 'currency'],
+        additionalProperties: false,
+      },
+      ConfirmSnapshotChangeInput: {
         type: 'object',
         properties: {
           pending_change_id: { type: 'string', format: 'uuid' },
@@ -384,6 +437,29 @@ const openApiSchema = {
             items: { type: 'string', format: 'uuid' },
           },
           applied_count: { type: 'integer', minimum: 0, maximum: 20 },
+          applied_fields: { type: 'object', additionalProperties: true },
+        },
+        required: ['outcome'],
+        additionalProperties: false,
+      },
+      ProposeSnapshotChangeResult: {
+        type: 'object',
+        properties: {
+          pending_change_id: { type: 'string', format: 'uuid' },
+          expires_at: { type: 'string', format: 'date-time' },
+          summary: { type: 'string' },
+          snapshot: { $ref: '#/components/schemas/ProposeSnapshotChangeInput' },
+        },
+        required: ['pending_change_id', 'expires_at', 'summary', 'snapshot'],
+        additionalProperties: false,
+      },
+      ConfirmSnapshotChangeResult: {
+        type: 'object',
+        properties: {
+          outcome: { type: 'string', enum: ['success', 'failure'] },
+          reason: { type: 'string', enum: ['expired', 'not_found'] },
+          operation: { type: 'string', enum: ['create', 'edit'] },
+          item_id: { type: 'string', format: 'uuid' },
           applied_fields: { type: 'object', additionalProperties: true },
         },
         required: ['outcome'],

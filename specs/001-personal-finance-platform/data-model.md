@@ -163,6 +163,13 @@ financial value. If Gio needs to see what a past edit/delete changed, the only p
 is `transactions` itself (for the current state) — per FR-018 there is no recoverable prior
 value, by design.
 
+## Entity: `snapshot_mutations` (Snapshot Mutation Audit Log)
+
+Permanent, redacted record of confirmed conversational asset/liability creates and edits.
+It stores `owner_id`, `channel`, `tool_name`, `operation`, affected `item_id`, actor,
+outcome, and timestamp. It deliberately has no amount, name, category, institution, notes,
+currency, or other financial-value column. RLS restricts every row to the owner.
+
 ## Entity: `exchange_rates` (Exchange Rate)
 
 **Added 2026-08-09 (research.md R8, spec FR-009/FR-022)**. Gio-maintained conversion rates

@@ -166,6 +166,8 @@ app/                        # Next.js App Router
 ├── dashboard/
 │   ├── page.tsx              # Dashboard UI (net worth incl. COP conversion, income/expense, category breakdown)
 │   ├── dashboard-nav.tsx     # shared tabs: summary, movements, history, and rates
+│   ├── net-worth/
+│   │   └── page.tsx          # asset/liability listing, filters, creation, and editing
 │   ├── movements/
 │   │   └── page.tsx          # transaction CRUD, filters, current-month range, sorting
 │   ├── history/
@@ -181,6 +183,8 @@ app/                        # Next.js App Router
 │   │   ├── aggregate-transactions/route.ts         # POST — GPT Action — added 2026-08-09 (R7)
 │   │   ├── propose-transaction-change/route.ts     # POST — GPT Action — added 2026-08-09 (R8) — FR-015/016/021
 │   │   ├── confirm-transaction-change/route.ts     # POST — GPT Action — added 2026-08-09 (R8) — FR-016/017
+│   │   ├── propose-snapshot-change/route.ts        # POST — proposed asset/liability create/edit
+│   │   ├── confirm-snapshot-change/route.ts        # POST — confirmed asset/liability mutation
 │   │   └── openapi.json/route.ts                   # GET — serves the OpenAPI schema — added 2026-08-09 (R7/R8)
 │   ├── dashboard-metrics/
 │   │   └── route.ts           # GET — aggregated metrics for the dashboard, by date range, incl. converted net worth
@@ -189,6 +193,9 @@ app/                        # Next.js App Router
 │   ├── transactions/
 │   │   ├── route.ts           # GET/POST — filtered detail and creation
 │   │   └── [id]/route.ts      # PATCH/DELETE — owner-scoped update and permanent deletion
+│   ├── snapshots/
+│   │   ├── route.ts           # GET/POST — owner-scoped asset/liability detail and creation
+│   │   └── [id]/route.ts      # PATCH — owner-scoped asset/liability update
 │   └── transaction-history/
 │       └── route.ts           # GET — paginated all-time monthly/category aggregation
 └── layout.tsx                 # Auth-gated root layout (single-owner login via Supabase Auth)
@@ -199,10 +206,11 @@ lib/
 │   ├── session-client.ts       # added 2026-08-09 (R8), scope narrowed post-/speckit-analyze (finding CA1) — refresh-token-exchange RLS client used ONLY by /api/mcp and /api/actions/* (no browser session available there); see research.md R8 §8.2
 │   └── queries.ts              # Parameterized query + mutation functions — shared by dashboard API and Q&A/Actions tools
 ├── mcp/                        # renamed from lib/claude/ 2026-08-09 (R7) — no longer Claude-SDK-specific
-│   ├── tools.ts                  # query_transactions / query_snapshots / aggregate_transactions / propose_transaction_change / confirm_transaction_change handlers — shared by /api/mcp and /api/actions/*
+│   ├── tools.ts                  # read, transaction mutation, and snapshot mutation handlers shared by /api/mcp and /api/actions/*
 │   ├── auth.ts                   # bearer-token check (MCP_ACTIONS_API_KEY) shared by both surfaces
 │   ├── log-query.ts              # writes to qa_queries (channel, tool_name, input, row_count) — read tools only
-│   └── log-mutation.ts           # added 2026-08-09 (R8) — writes to transaction_mutations using the constitution's redacted schema; never receives/persists field values
+│   ├── log-mutation.ts           # added 2026-08-09 (R8) — writes to transaction_mutations using the constitution's redacted schema; never receives/persists field values
+│   └── log-snapshot-mutation.ts  # redacted audit writer for confirmed asset/liability changes
 └── migration/
     ├── parse-csv.ts             # CSV parsing + row-level validation
     ├── upsert.ts                 # Idempotent upsert into Supabase
@@ -230,8 +238,13 @@ by both `/api/mcp` and `/api/actions/*`); `app/qa/page.tsx` and `app/api/qa/rout
 removed — there is no in-app Q&A UI, questions are asked from ChatGPT (mandatory) or
 Claude.ai (optional) directly. The migration script (`scripts/migrate.ts`) is a one-off CLI,
 not a long-running service. Ongoing transaction entry is supported through the authenticated
-dashboard CRUD and through confirmed conversational mutations; snapshot import remains a
-one-off migration concern.
+dashboard CRUD and through confirmed conversational mutations.
+
+**Asset/liability maintenance extension (2026-09-03)**: `/dashboard/net-worth` and
+`/api/snapshots` provide owner-session creation and update of snapshot records. MCP and
+Actions add `propose_snapshot_change` / `confirm_snapshot_change`, backed by the same RLS
+query layer and a redacted `snapshot_mutations` audit table. Net worth remains derived and
+has no direct write path.
 **Revised 2026-08-09 (R8, constitution v1.2.0)**: `lib/supabase/client.ts` is split into
 `service-role-client.ts` (migration-only, imported nowhere under `app/`) and
 `session-client.ts` (the refresh-token-exchange RLS client used only by `/api/mcp` and

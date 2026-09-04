@@ -8,8 +8,8 @@ they are no longer called by this system's own Claude API loop. Instead they are
 as:
 
 **Revised again 2026-08-09 (research.md R8, constitution v1.2.0)**: the mutation flow uses
-`propose_transaction_change`, `propose_transaction_batch`, and
-`confirm_transaction_change`. They share the same narrow-tool, no-raw-SQL discipline as
+`propose_transaction_change`, `propose_transaction_batch`, `confirm_transaction_change`,
+`propose_snapshot_change`, and `confirm_snapshot_change`. They share the same narrow-tool, no-raw-SQL discipline as
 the read tools; see research.md R8 §8.1 for the two-step design rationale.
 
 - **MCP tools** exposed by the Streamable HTTP MCP server at `/api/mcp` — consumed by a
@@ -160,6 +160,54 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
 
 **Response**: a single change returns `{ "outcome": "success", "operation": "create" | "edit" | "delete", "transaction_id", "applied_fields" }`; a batch returns `{ "outcome": "success", "operation": "batch_create", "transaction_ids", "applied_count" }`. A failure returns `{ "outcome": "failure", "reason": "expired" | "not_found" }`. The calling model must create a fresh proposal rather than retrying an expired or consumed `pending_change_id`.
 
+## `propose_snapshot_change`
+
+```json
+{
+  "name": "propose_snapshot_change",
+  "description": "Step 1 of 2 for creating or editing one asset or liability. For edits, resolve exactly one item_id with query_snapshots first. Show every field and wait for explicit confirmation. Net worth is derived and cannot be edited directly.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "operation": { "type": "string", "enum": ["create", "edit"] },
+      "target_item_id": { "type": "string", "format": "uuid", "description": "Required for edit." },
+      "snapshot_date": { "type": "string", "format": "date" },
+      "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+      "kind": { "type": "string", "enum": ["asset", "liability"] },
+      "category": { "type": "string", "minLength": 1, "maxLength": 100 },
+      "amount": { "type": "number", "minimum": 0 },
+      "currency": { "type": "string", "pattern": "^[A-Za-z]{3,10}$" },
+      "institution": { "type": ["string", "null"], "maxLength": 160 },
+      "notes": { "type": ["string", "null"], "maxLength": 500 }
+    },
+    "required": ["operation", "snapshot_date", "name", "kind", "category", "amount", "currency"],
+    "additionalProperties": false
+  }
+}
+```
+
+**Response**: `{ "pending_change_id", "expires_at", "summary", "snapshot" }`. It stores one
+five-minute proposal and does not change `snapshots`.
+
+## `confirm_snapshot_change`
+
+```json
+{
+  "name": "confirm_snapshot_change",
+  "description": "Step 2 of 2. Apply one pending asset or liability proposal only after Gio explicitly confirms the exact fields in his immediately following message. Never use a transaction pending_change_id.",
+  "input_schema": {
+    "type": "object",
+    "properties": { "pending_change_id": { "type": "string", "format": "uuid" } },
+    "required": ["pending_change_id"],
+    "additionalProperties": false
+  }
+}
+```
+
+**Response**: success returns `{ "outcome": "success", "operation": "create" | "edit",
+"item_id", "applied_fields" }`; failure returns `expired` or `not_found`. Every attempt is
+logged to `snapshot_mutations` without amount, name, category, institution, notes, or currency.
+
 ## Grounding contract (applies on every call, on both surfaces)
 
 1. **Every tool description above carries its own grounding instruction** — since this
@@ -199,3 +247,5 @@ tool exists on either surface (constitution Principle II, V; see research.md R2)
    Every `confirm_transaction_change` call — success or failure — is logged to
    `transaction_mutations` with the redacted schema from data-model.md; the financial field
    values themselves are never persisted to that log (constitution Principle II).
+   Snapshot creates/edits use the equivalent `propose_snapshot_change` →
+   `confirm_snapshot_change` boundary and the redacted `snapshot_mutations` audit table.

@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   MutationOperation,
   ProposedChange,
+  ProposedSnapshotChange,
+  SnapshotFields,
   TransactionDraft,
   Transaction,
   TransactionType,
@@ -293,4 +295,58 @@ export async function applyMutation(
 }
 export async function currentOwnerId(client: SupabaseClient) {
   return owner(client);
+}
+
+export async function createSnapshot(
+  client: SupabaseClient,
+  fields: SnapshotFields,
+) {
+  const ownerId = await owner(client);
+  const row = {
+    item_id: crypto.randomUUID(),
+    owner_id: ownerId,
+    ...fields,
+  };
+  const { data, error } = await client
+    .from('snapshots')
+    .insert(row)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateSnapshot(
+  client: SupabaseClient,
+  itemId: string,
+  fields: SnapshotFields,
+) {
+  const ownerId = await owner(client);
+  const { data, error } = await client
+    .from('snapshots')
+    .update(fields)
+    .eq('owner_id', ownerId)
+    .eq('item_id', itemId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function applySnapshotMutation(
+  client: SupabaseClient,
+  change: ProposedSnapshotChange,
+) {
+  const fields: SnapshotFields = {
+    snapshot_date: change.snapshot_date,
+    name: change.name,
+    kind: change.kind,
+    category: change.category,
+    amount: change.amount,
+    currency: change.currency,
+    institution: change.institution,
+    notes: change.notes,
+  };
+  if (change.operation === 'create') return createSnapshot(client, fields);
+  return updateSnapshot(client, change.target_item_id!, fields);
 }

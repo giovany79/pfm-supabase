@@ -16,14 +16,16 @@ connector (mcp-server.md) is optional/best-effort.
 | `POST` | `/api/actions/propose-transaction-change` | `propose_transaction_change` — added 2026-08-09 (R8) |
 | `POST` | `/api/actions/propose-transaction-batch` | `propose_transaction_batch` — proposes 2–20 atomic creates |
 | `POST` | `/api/actions/confirm-transaction-change` | `confirm_transaction_change` — added 2026-08-09 (R8) |
+| `POST` | `/api/actions/propose-snapshot-change` | `propose_snapshot_change` — proposes one asset/liability create or edit |
+| `POST` | `/api/actions/confirm-snapshot-change` | `confirm_snapshot_change` — applies the explicitly confirmed proposal |
 | `GET` | `/api/actions/openapi.json` | Serves the OpenAPI schema below (public, no auth — it contains no financial data, only the API shape) |
 
 Each `POST` endpoint's request body is exactly the tool's `input_schema` from qa-tools.md;
 each response body is exactly the tool's result shape. Same validation, same "empty result,
-not an error" behavior for the read endpoints; the three mutation-flow endpoints follow
+not an error" behavior for the read endpoints; the five mutation-flow endpoints follow
 qa-tools.md's propose/confirm response shapes exactly. Read calls log to `qa_queries` with
-`channel: 'action'`; `confirm-transaction-change` calls log to `transaction_mutations` with
-`channel: 'action'` (redacted schema — research.md R8) — see qa-tools.md's Grounding
+`channel: 'action'`; confirmation calls log to `transaction_mutations` or
+`snapshot_mutations` with `channel: 'action'` (redacted schemas) — see qa-tools.md's Grounding
 Contract, which applies identically here.
 
 ## Authentication
@@ -43,7 +45,7 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
 ```json
 {
   "openapi": "3.1.0",
-  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.2.0" },
+  "info": { "title": "PFM Supabase Q&A Actions", "version": "1.3.1" },
   "servers": [{ "url": "https://<deployed-host>/api/actions" }],
   "paths": {
     "/query-transactions": {
@@ -111,6 +113,18 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
         },
         "responses": { "200": { "description": "Outcome of the confirmed mutation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConfirmTransactionChangeResult" } } } } }
       }
+    },
+    "/propose-snapshot-change": {
+      "post": {
+        "operationId": "proposeSnapshotChange",
+        "summary": "Step 1 of 2 for creating or editing one asset or liability. For edits, resolve exactly one item_id with querySnapshots first. Net worth is calculated and cannot be edited directly."
+      }
+    },
+    "/confirm-snapshot-change": {
+      "post": {
+        "operationId": "confirmSnapshotChange",
+        "summary": "Step 2 of 2. Apply the pending asset/liability proposal only after Gio explicitly confirms its exact fields."
+      }
     }
   },
   "components": {
@@ -120,7 +134,9 @@ var, same secret as the MCP server — one credential to rotate, not two (Princi
       "AggregateTransactionsInput": { "$ref": "qa-tools.md#aggregate_transactions.input_schema (copied verbatim)" },
       "ProposeTransactionChangeInput": { "$ref": "qa-tools.md#propose_transaction_change.input_schema (copied verbatim) — added 2026-08-09 (R8)" },
       "ProposeTransactionBatchInput": { "$ref": "qa-tools.md#propose_transaction_batch.input_schema (copied verbatim)" },
-      "ConfirmTransactionChangeInput": { "$ref": "qa-tools.md#confirm_transaction_change.input_schema (copied verbatim) — added 2026-08-09 (R8)" }
+      "ConfirmTransactionChangeInput": { "$ref": "qa-tools.md#confirm_transaction_change.input_schema (copied verbatim) — added 2026-08-09 (R8)" },
+      "ProposeSnapshotChangeInput": { "$ref": "qa-tools.md#propose_snapshot_change.input_schema (copied verbatim)" },
+      "ConfirmSnapshotChangeInput": { "$ref": "qa-tools.md#confirm_snapshot_change.input_schema (copied verbatim)" }
     }
   }
 }
@@ -137,11 +153,11 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
 ## Custom GPT configuration (manual, one-time, done in the ChatGPT UI — not code)
 
 1. Create a new GPT in ChatGPT → Configure → Actions → "Import from URL" →
-   `https://<deployed-host>/api/actions/openapi.json`.
+   `https://<deployed-host>/api/actions/openapi.json?v=1.3.1`.
 2. Authentication → API Key → Bearer → paste `MCP_ACTIONS_API_KEY`.
 3. GPT **Instructions** field (the closest equivalent to the original in-app system
-   prompt): *"You answer questions about Gio's personal finances and can create, edit, or
-   permanently delete transactions, using the provided Actions only. Never state a number,
+   prompt): *"You answer questions about Gio's personal finances; you can create, edit, or
+   permanently delete transactions and create or edit assets and liabilities, using the provided Actions only. Never state a number,
    trend, or category you did not just retrieve via an Action this turn. If an Action
    returns row_count: 0, say plainly that you don't have matching data — never estimate.
    Snapshots may use different currencies (see each row's `currency` field); never sum or
@@ -163,7 +179,14 @@ copy-paste), plus the corresponding `*Result` schemas (`{rows, row_count}` /
    batch. Only if Gio's immediately following message explicitly confirms that exact batch,
    call confirmTransactionChange exactly once with its pending_change_id; that single call
    applies every row atomically. Never split a batch into individual proposals or
-   confirmations, and never silently omit an invalid row."* — added
+   confirmations, and never silently omit an invalid row. For an asset or liability edit,
+   first call querySnapshots and identify exactly one item_id; if several rows could match,
+   show them and ask Gio to choose. Collect snapshot_date, name, kind, category, amount,
+   currency, institution, and notes, then call proposeSnapshotChange and show the exact
+   returned proposal. Only if Gio's immediately following message explicitly confirms it,
+   call confirmSnapshotChange with that pending_change_id. Never send a snapshot proposal
+   to confirmTransactionChange or a transaction proposal to confirmSnapshotChange. Net
+   worth is assets minus liabilities: calculate or query it, but never edit it directly."* — added
    2026-08-09 (R8) for the mutation flow; the read-only
    portion is the ChatGPT-side equivalent of the original Tool Runner's grounding system
    prompt (research.md R2/R7) and of the Claude.ai side's per-tool-description grounding

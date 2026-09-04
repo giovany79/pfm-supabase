@@ -1,9 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ProposedBatchChange, ProposedChange, TransactionDraft } from '@/lib/types';
-import { aggregateTransactions, applyMutation, createTransactionsBatch, currentOwnerId, querySnapshots, queryTransactions } from '@/lib/supabase/queries';
+import type { ProposedBatchChange, ProposedChange, ProposedSnapshotChange, TransactionDraft } from '@/lib/types';
+import { aggregateTransactions, applyMutation, applySnapshotMutation, createTransactionsBatch, currentOwnerId, querySnapshots, queryTransactions } from '@/lib/supabase/queries';
 import { logMutation } from '@/lib/mcp/log-mutation';
+import { logSnapshotMutation } from '@/lib/mcp/log-snapshot-mutation';
 import { logQuery } from '@/lib/mcp/log-query';
 import { setLocked } from '@/lib/migration/migration-lock';
+import { parseProposedSnapshotChange } from '@/lib/snapshot-validation';
 
 const validType = (v: unknown) => v === 'income' || v === 'expensive';
 const sqlLike = (value: unknown) =>
@@ -68,10 +70,84 @@ export async function proposeTransactionBatch(client: SupabaseClient, input: Rec
   const { data, error } = await client.from('pending_transaction_changes').insert({ owner_id: ownerId, operation: 'create', target_transaction_id: null, proposed_fields: change, expires_at }).select('id, expires_at').single(); if (error) throw error;
   return { pending_change_id: data.id, expires_at: data.expires_at, summary, transaction_count: change.transactions.length, total_amount: total, transactions: change.transactions };
 }
+
+export async function proposeSnapshotChange(client: SupabaseClient, input: Record<string, unknown>) {
+  const change = parseProposedSnapshotChange(input);
+  const ownerId = await currentOwnerId(client);
+  if (change.operation === 'edit') {
+    const existing = await querySnapshots(client);
+    if (!existing.rows.some((row) => row.item_id === change.target_item_id))
+      throw new Error('No existe un activo o pasivo con ese target_item_id.');
+  }
+  const expires_at = new Date(Date.now() + 5 * 60_000).toISOString();
+  const summary = `${change.operation} ${change.kind} ${change.name}: ${change.amount} ${change.currency} (${change.snapshot_date})`;
+  const { data, error } = await client.from('pending_transaction_changes').insert({
+    owner_id: ownerId,
+    operation: change.operation,
+    target_transaction_id: null,
+    proposed_fields: change,
+    expires_at,
+  }).select('id, expires_at').single();
+  if (error) throw error;
+  return {
+    pending_change_id: data.id,
+    expires_at: data.expires_at,
+    summary,
+    snapshot: {
+      operation: change.operation,
+      target_item_id: change.target_item_id,
+      snapshot_date: change.snapshot_date,
+      name: change.name,
+      kind: change.kind,
+      category: change.category,
+      amount: change.amount,
+      currency: change.currency,
+      institution: change.institution,
+      notes: change.notes,
+    },
+  };
+}
+
+export async function confirmSnapshotChange(
+  client: SupabaseClient,
+  channel: 'mcp' | 'action',
+  pending_change_id: string,
+) {
+  const ownerId = await currentOwnerId(client);
+  const { data: pending, error } = await client.from('pending_transaction_changes')
+    .select('*').eq('owner_id', ownerId).eq('id', pending_change_id).maybeSingle();
+  if (error) throw error;
+  if (!pending) return { outcome: 'failure', reason: 'not_found' };
+  const change = pending.proposed_fields as ProposedSnapshotChange;
+  if (change.entity !== 'snapshot' || (change.operation !== 'create' && change.operation !== 'edit'))
+    return { outcome: 'failure', reason: 'not_found' };
+  if (new Date(pending.expires_at) < new Date()) {
+    await client.from('pending_transaction_changes').delete().eq('id', pending.id);
+    await logSnapshotMutation(client, channel, change.operation, change.target_item_id ?? null, 'failure');
+    return { outcome: 'failure', reason: 'expired' };
+  }
+  try {
+    const affected = await applySnapshotMutation(client, change);
+    await client.from('pending_transaction_changes').delete().eq('id', pending.id);
+    await setLocked(client, ownerId);
+    await logSnapshotMutation(client, channel, change.operation, affected.item_id, 'success');
+    return {
+      outcome: 'success',
+      operation: change.operation,
+      item_id: affected.item_id,
+      applied_fields: change,
+    };
+  } catch (cause) {
+    await client.from('pending_transaction_changes').delete().eq('id', pending.id);
+    await logSnapshotMutation(client, channel, change.operation, change.target_item_id ?? null, 'failure');
+    throw cause;
+  }
+}
 export async function confirmTransactionChange(client: SupabaseClient, channel: 'mcp'|'action', pending_change_id: string) {
   const ownerId = await currentOwnerId(client); const { data: pending, error } = await client.from('pending_transaction_changes').select('*').eq('owner_id', ownerId).eq('id', pending_change_id).maybeSingle();
   if (error) throw error; if (!pending) return { outcome: 'failure', reason: 'not_found' };
   const change = pending.proposed_fields as ProposedChange | ProposedBatchChange;
+  if ('entity' in change && change.entity === 'snapshot') return { outcome: 'failure', reason: 'not_found' };
   const auditOperation = change.operation === 'batch_create' ? 'create' : change.operation;
   const targetId = change.operation === 'batch_create' ? null : change.target_transaction_id ?? null;
   if (new Date(pending.expires_at) < new Date()) { await client.from('pending_transaction_changes').delete().eq('id', pending.id); await logMutation(client, channel, auditOperation, targetId, 'failure'); return { outcome: 'failure', reason: 'expired' }; }

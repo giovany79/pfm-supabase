@@ -30,3 +30,22 @@ export type ProposedBatchChange = {
   operation: 'batch_create';
   transactions: TransactionDraft[];
 };
+
+export type SnapshotKind = 'asset' | 'liability';
+
+export type SnapshotFields = {
+  snapshot_date: string;
+  name: string;
+  kind: SnapshotKind;
+  category: string;
+  amount: number;
+  currency: string;
+  institution: string | null;
+  notes: string | null;
+};
+
+export type ProposedSnapshotChange = SnapshotFields & {
+  entity: 'snapshot';
+  operation: 'create' | 'edit';
+  target_item_id?: string;
+};

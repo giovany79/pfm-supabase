@@ -130,7 +130,7 @@ that surface, it does not block validation.
 
 **6a. ChatGPT Custom GPT (mandatory)**: follow the repository setup guide in
 [README.md](../../README.md#chatgpt-setup). Import
-`https://pfm-supabase.vercel.app/api/actions/openapi.json`, configure API Key/Bearer with
+`https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.3.1`, configure API Key/Bearer with
 the value of `MCP_ACTIONS_API_KEY`, and paste the canonical Instructions from
 [gpt-actions.md](contracts/gpt-actions.md#custom-gpt-configuration).
 Ask: *"How much did I spend on health in [a month with a known health transaction]?"*
@@ -148,7 +148,7 @@ contract.
 `MCP_ACTIONS_API_KEY` before starting the agent from the repository root. Codex reads
 `.codex/config.toml`; Claude Code reads `.mcp.json` after you trust the workspace and approve
 `pfm-finance`. Run `codex mcp list` or `claude mcp list`, then ask the same known-answer
-question. The server must expose six typed tools. Read tools run directly; mutation tools
+question. The server must expose eight typed tools. Read tools run directly; mutation tools
 require the proposal → explicit confirmation flow and client approval.
 
 For a batch create, provide 2–20 complete movements and confirm the agent calls
@@ -157,6 +157,12 @@ for one immediately following explicit confirmation covering the entire batch be
 calling `confirmTransactionChange` exactly once with the batch `pending_change_id`. The
 result must contain one `transaction_id` per inserted row. The agent must not propose or
 confirm movements individually.
+
+For an asset or liability change, confirm the agent first uses `querySnapshots` to resolve
+one `item_id` when editing, then calls `proposeSnapshotChange`, shows every field, waits for
+explicit confirmation, and calls `confirmSnapshotChange`. Verify the dashboard and a new
+`querySnapshots` call reflect the change and that net worth was recalculated rather than
+written directly.
 
 For whichever surface(s) you validated:
 - **Expected**: an answer whose figure matches the source data, produced by the model

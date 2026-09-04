@@ -57,6 +57,35 @@ not a Q&A/Actions tool — see plan.md Project Structure for why). Backs the
 - `GET`: returns every currency's most recent rate row: `[{ "currency": "USD", "rate_to_cop": 4100.5, "effective_date": "2026-08-01", "updated_at": "..." }, ...]`.
 - `POST`: body `{ "currency": "USD", "rate_to_cop": 4100.5, "effective_date": "2026-08-01" }` — **upserts** on `(owner_id, currency, effective_date)` (fixed post-`/speckit-analyze`, finding A1): inserts a new `exchange_rates` row for a new `(currency, effective_date)` pair, preserving history across different dates; posting the same `(currency, effective_date)` pair again updates that row's `rate_to_cop`/`updated_at` in place instead of creating a duplicate — this is what makes "the most recent applicable rate" unambiguous, since two rows can never tie on `effective_date` for the same currency. Net-worth conversion always picks the latest `effective_date` per currency, see data-model.md.
 
+## `GET /api/snapshots` / `POST /api/snapshots` / `PATCH /api/snapshots/:id`
+
+Browser-session-authenticated API for `/dashboard/net-worth` (FR-029).
+
+- `GET`: accepts optional `kind`, `category`, and `institution`; returns the latest row for
+  each `item_id`, plus complete `categories` and `currencies` catalogs.
+- `POST`: creates one asset or liability. Required fields are `snapshot_date`, `name`,
+  `kind`, `category`, `amount`, and `currency`; `institution` and `notes` are nullable.
+- `PATCH /:id`: replaces the editable fields of the owner-scoped snapshot while preserving
+  its `item_id`.
+
+The endpoint never accepts a `net_worth` value. Net worth is always recomputed from current
+assets minus current liabilities, separated by currency and converted only through the
+configured exchange-rate table. A successful create or edit sets the migration lock so a
+later CSV import cannot silently overwrite dashboard-maintained values.
+
+## `GET /api/snapshot-history`
+
+Browser-session-authenticated API for the historical charts in `/dashboard/net-worth`.
+It reads the complete owner-scoped snapshot history and returns:
+
+- `general`: per-currency time series with assets, liabilities, and derived net worth;
+- `items`: a time series for each asset or liability identity, grouped by kind, normalized
+  name, category, institution, and currency;
+- `currencies` and `row_count` for selectors and empty states.
+
+General totals carry forward the most recent known valuation of each identity at every
+recorded date. Currencies remain separate and are never summed implicitly.
+
 ## `GET /api/transactions`
 
 Returns the transaction detail used by `/dashboard/movements`.

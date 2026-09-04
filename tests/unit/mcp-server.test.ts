@@ -45,17 +45,18 @@ describe('finance MCP server', () => {
     expect(body.result.capabilities.tools).toBeDefined();
     expect(body.result.instructions).toContain('propose_transaction_change');
     expect(body.result.instructions).toContain('confirm_transaction_change');
-    expect(body.result.instructions).toContain('ask for one confirmation covering the entire batch');
-    expect(body.result.instructions).toContain('Never split a batch into individual proposals or confirmations');
+    expect(body.result.instructions).toContain('propose_snapshot_change');
+    expect(body.result.instructions).toContain('confirm_snapshot_change');
+    expect(body.result.instructions).toContain('must never be edited directly');
   });
 
-  it('lists six typed tools and marks confirmation as destructive', async () => {
+  it('lists eight typed tools and marks both confirmation tools as destructive', async () => {
     const response = await POST(mcpRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }));
     const body = await response.json();
     const tools = body.result.tools as Array<Record<string, any>>;
 
     expect(response.status).toBe(200);
-    expect(tools).toHaveLength(6);
+    expect(tools).toHaveLength(8);
     expect(tools.every((tool) => tool.inputSchema?.type === 'object')).toBe(true);
     expect(tools.find((tool) => tool.name === 'aggregate_transactions')?.inputSchema.required).toContain(
       'group_by',
@@ -73,6 +74,10 @@ describe('finance MCP server', () => {
     expect(tools.find((tool) => tool.name === 'confirm_transaction_change')?.annotations.destructiveHint).toBe(
       true,
     );
+    expect(tools.find((tool) => tool.name === 'propose_snapshot_change')?.inputSchema.required).toEqual(
+      expect.arrayContaining(['operation', 'snapshot_date', 'name', 'kind', 'category', 'amount', 'currency']),
+    );
+    expect(tools.find((tool) => tool.name === 'confirm_snapshot_change')?.annotations.destructiveHint).toBe(true);
   });
 
   it('rejects requests without the configured bearer token', async () => {

@@ -36,11 +36,11 @@ describe('GPT Actions OpenAPI schema', () => {
     expect(body.servers[0].url).toBe(
       'https://pfm-supabase.vercel.app/api/actions',
     );
-    expect(body.info.version).toBe('1.2.1');
-    expect(Object.keys(body.paths)).toHaveLength(6);
+    expect(body.info.version).toBe('1.3.1');
+    expect(Object.keys(body.paths)).toHaveLength(8);
   });
 
-  it('exposes six uniquely named operations with request schemas', async () => {
+  it('exposes eight uniquely named operations with request schemas', async () => {
     const openApiSchema = await getOpenApiSchema();
     const operations = Object.values(
       openApiSchema.paths as Record<string, OpenApiPath>,
@@ -48,8 +48,8 @@ describe('GPT Actions OpenAPI schema', () => {
       (path) => path.post,
     );
 
-    expect(operations).toHaveLength(6);
-    expect(new Set(operations.map((operation) => operation.operationId)).size).toBe(6);
+    expect(operations).toHaveLength(8);
+    expect(new Set(operations.map((operation) => operation.operationId)).size).toBe(8);
     expect(
       operations.every(
         (operation) =>
@@ -57,6 +57,46 @@ describe('GPT Actions OpenAPI schema', () => {
           operation.requestBody.content['application/json'].schema.$ref,
       ),
     ).toBe(true);
+  });
+
+  it('resolves every local schema reference to an object component', async () => {
+    const openApiSchema = await getOpenApiSchema();
+    const schemaPrefix = '#/components/schemas/';
+    const references = new Set<string>();
+
+    const collectReferences = (value: unknown): void => {
+      if (!value || typeof value !== 'object') return;
+
+      if (Array.isArray(value)) {
+        value.forEach(collectReferences);
+        return;
+      }
+
+      for (const [key, child] of Object.entries(value)) {
+        if (
+          key === '$ref' &&
+          typeof child === 'string' &&
+          child.startsWith(schemaPrefix)
+        ) {
+          references.add(child);
+        } else {
+          collectReferences(child);
+        }
+      }
+    };
+
+    collectReferences(openApiSchema);
+
+    const invalidReferences = [...references].filter((reference) => {
+      const componentName = reference.slice(schemaPrefix.length);
+      const component = (
+        openApiSchema.components.schemas as Record<string, unknown>
+      )[componentName];
+
+      return !component || typeof component !== 'object' || Array.isArray(component);
+    });
+
+    expect(invalidReferences).toEqual([]);
   });
 
   it('requires confirmation for the applying mutation only', async () => {
@@ -82,6 +122,11 @@ describe('GPT Actions OpenAPI schema', () => {
     );
     expect(openApiSchema.paths['/confirm-transaction-change'].post.description).toContain(
       'this single call applies every row atomically',
+    );
+    expect(openApiSchema.paths['/propose-snapshot-change'].post['x-openai-isConsequential']).toBe(false);
+    expect(openApiSchema.paths['/confirm-snapshot-change'].post['x-openai-isConsequential']).toBe(true);
+    expect(openApiSchema.paths['/propose-snapshot-change'].post.description).toContain(
+      'cannot be edited directly',
     );
   });
 });

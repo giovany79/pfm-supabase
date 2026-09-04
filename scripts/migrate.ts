@@ -15,7 +15,7 @@ async function main() {
 
   if (!force && (await checkLocked(client, ownerId))) {
     throw new Error(
-      'pfm-gio.csv migration is locked after a confirmed mutation; use --force only for intentional recovery.',
+      'Financial CSV migration is locked after a user mutation; use --force only for intentional recovery.',
     );
   }
 

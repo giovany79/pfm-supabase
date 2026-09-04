@@ -660,7 +660,8 @@ tbody tr:hover {
 .category-filter select,
 .date-filter input,
 .transaction-form input,
-.transaction-form select {
+.transaction-form select,
+.transaction-form textarea {
   min-width: 220px;
   border: 1px solid #d0d5dd;
   border-radius: 8px;
@@ -676,7 +677,8 @@ tbody tr:hover {
 .category-filter select:focus,
 .date-filter input:focus,
 .transaction-form input:focus,
-.transaction-form select:focus {
+.transaction-form select:focus,
+.transaction-form textarea:focus {
   border-color: #8098e8;
   box-shadow: 0 0 0 3px #eef2ff;
 }
@@ -827,9 +829,36 @@ tbody tr:hover {
   gap: 1rem;
 }
 .transaction-form input,
-.transaction-form select {
+.transaction-form select,
+.transaction-form textarea {
   width: 100%;
   min-width: 0;
+}
+.transaction-form textarea {
+  resize: vertical;
+}
+.asset-filters {
+  display: grid;
+  grid-template-columns: auto minmax(240px, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+.asset-summary {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.asset-summary .card {
+  min-height: 120px;
+}
+.assets-table {
+  min-width: 1040px;
+}
+.table-note {
+  display: block;
+  max-width: 260px;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 400;
 }
 .full-field {
   grid-column: 1 / -1;
@@ -894,6 +923,27 @@ tbody tr:hover {
   color: var(--muted);
   font-size: 0.78rem;
 }
+.snapshot-history-grid {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.snapshot-history-chart {
+  width: 100%;
+  padding: 0.75rem 1rem 0.5rem 0.25rem;
+}
+.snapshot-item-context {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.snapshot-item-context strong {
+  color: var(--ink);
+}
 @media (max-width: 800px) {
   .login-page {
     display: block;
@@ -940,6 +990,10 @@ tbody tr:hover {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
+  .asset-filters {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
   .type-filter {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -982,6 +1036,9 @@ tbody tr:hover {
   }
   .history-chart {
     height: 340px;
+  }
+  .snapshot-history-chart {
+    height: 320px;
   }
   th,
   td {

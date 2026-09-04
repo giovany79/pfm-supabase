@@ -255,9 +255,9 @@ while preserving bearer authentication, RLS, grounding, and confirmed-only mutat
 
 - [X] T067 [US3] Replace the minimal JSON-RPC adapter with the official MCP SDK Streamable HTTP transport, complete tool schemas/annotations, server instructions, and protocol-safe errors in `lib/mcp/server.ts` and `app/api/mcp/route.ts`
 - [X] T068 [P] [US3] Add secret-free project configuration for Codex and Claude Code in `.codex/config.toml` and `.mcp.json`, with read/write approval policy and environment-based bearer authentication
-- [ ] T069 [P] [US3] Add and run MCP protocol and deployed endpoint tests, validate both agent clients can discover all six tools, and document the one-time trust/approval steps
+- [ ] T069 [P] [US3] Add and run MCP protocol and deployed endpoint tests, validate both agent clients can discover all eight tools, and document the one-time trust/approval steps
 - [X] T070 [US3] Replace the rotation-prone static refresh-token runtime path with server-only owner email/password session creation while preserving RLS and a legacy refresh-token fallback in `lib/supabase/session-client.ts`
-- [X] T071 [US3] Add confirmed atomic creation of 2–20 transactions through `propose_transaction_batch` plus the existing confirmation tool; expose it in MCP and GPT Actions, validate required fields and limits, and document the six-tool contract
+- [X] T071 [US3] Add confirmed atomic creation of 2–20 transactions through `propose_transaction_batch` plus the existing confirmation tool; expose it in MCP and GPT Actions, validate required fields and limits, and document the transaction-batch contract
 
 ---
 
@@ -358,6 +358,16 @@ Task: "Implement the GPT Action REST endpoints in app/api/actions/*/route.ts"
 5. Each story adds value without breaking the previous ones — the query layer (`lib/supabase/queries.ts`) is additive across all three
 
 ---
+
+## Phase 9: Asset and Liability Maintenance Extension
+
+- [X] T072 [US2] Add owner-scoped snapshot creation/update queries, validation, and browser APIs in `lib/supabase/queries.ts`, `lib/snapshot-validation.ts`, and `app/api/snapshots/`
+- [X] T073 [US2] Add `/dashboard/net-worth` with asset/liability filters, per-currency totals, and create/edit forms; add it to dashboard navigation
+- [X] T074 [US3] Add `propose_snapshot_change` and `confirm_snapshot_change` with bounded confirmation, entity separation, migration locking, and redacted audit logging
+- [X] T075 [US3] Expose the snapshot mutation workflow as MCP tools and GPT Actions; publish OpenAPI/MCP contract version 1.3.1
+- [X] T076 [P] Add `snapshot_mutations` migration with owner RLS and no plaintext financial fields
+- [X] T077 [P] Add validation, proposal/confirmation, MCP, OpenAPI, and audit privacy regression tests
+- [X] T078 [US2] Add owner-scoped snapshot history aggregation and general/per-item charts to `/dashboard/net-worth`, keeping currencies separate and carrying forward the latest valuation
 
 ## Notes
 

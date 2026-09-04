@@ -2,7 +2,7 @@
 
 Plataforma personal de finanzas construida con Next.js 15 y Supabase. Centraliza
 activos, pasivos, ingresos y gastos; ofrece visualización histórica y permite consultar
-o modificar movimientos desde el dashboard y desde integraciones autenticadas.
+o modificar movimientos, activos y pasivos desde el dashboard y desde integraciones autenticadas.
 
 ## Funcionalidades
 
@@ -11,6 +11,8 @@ o modificar movimientos desde el dashboard y desde integraciones autenticadas.
 - Dashboard con patrimonio neto en COP, activos, pasivos, ingresos y gastos.
 - Tablas de patrimonio y gráficas de ingresos/gastos por categoría.
 - Administración de movimientos con creación, edición y eliminación.
+- Administración de activos y pasivos con creación y edición; el patrimonio se recalcula automáticamente.
+- Histórico patrimonial general por moneda y evolución individual de cada activo o pasivo.
 - Filtros de movimientos por tipo, categoría y rango de fechas.
 - Rango inicial del mes actual: primer día del mes hasta la fecha vigente.
 - Orden cronológico descendente y orden alternable por valor.
@@ -25,6 +27,7 @@ o modificar movimientos desde el dashboard y desde integraciones autenticadas.
 | Ruta | Descripción |
 | --- | --- |
 | `/dashboard` | Resumen de patrimonio, ingresos, gastos y composición por categoría. |
+| `/dashboard/net-worth` | Detalle, administración e histórico general e individual de activos y pasivos por moneda. |
 | `/dashboard/movements` | Detalle y CRUD de ingresos y gastos con filtros y ordenamiento. |
 | `/dashboard/history` | Histórico mensual de ingresos y gastos por categoría. |
 | `/dashboard/settings` | Configuración manual de tasas de cambio a COP. |
@@ -98,8 +101,8 @@ npm run migrate -- --owner-id <supabase-user-id>
 ```
 
 La importación usa `item_id` y `transaction_id` para evitar duplicados. Después de una
-mutación conversacional confirmada, la reimportación de `pfm-gio.csv` queda bloqueada para
-no restaurar datos editados o eliminados. `--force` existe únicamente para una recuperación
+mutación confirmada o una edición patrimonial desde el dashboard, la reimportación financiera
+queda bloqueada para no restaurar o sobrescribir datos modificados. `--force` existe únicamente para una recuperación
 intencional:
 
 ```bash
@@ -168,6 +171,8 @@ Las siguientes rutas requieren la cookie de sesión del propietario:
 - `GET|POST /api/exchange-rates`
 - `GET|POST /api/transactions`
 - `PATCH|DELETE /api/transactions/:id`
+- `GET|POST /api/snapshots`
+- `PATCH /api/snapshots/:id`
 - `GET /api/transaction-history`
 
 Los contratos detallados están en
@@ -195,10 +200,11 @@ Todos los `POST` de Actions y MCP requieren
 en Vercel, pero nunca lo escribas en `.mcp.json`, `.codex/config.toml`, el README o Git.
 Estas integraciones deben apuntar al despliegue HTTPS, no a `localhost`.
 
-El servidor expone seis herramientas: `query_transactions`, `query_snapshots`,
+El servidor expone ocho herramientas: `query_transactions`, `query_snapshots`,
 `aggregate_transactions`, `propose_transaction_change`, `propose_transaction_batch` y
-`confirm_transaction_change`. Las tres primeras consultan datos. Las tres restantes
-implementan una escritura en dos pasos: primero proponen un cambio individual o un lote de
+`confirm_transaction_change`, más `propose_snapshot_change` y `confirm_snapshot_change`
+para crear o editar activos y pasivos. Las tres primeras consultan datos. Las restantes
+implementan escrituras en dos pasos: primero proponen un cambio individual o un lote de
 2 a 20 movimientos y luego requieren confirmación explícita antes de aplicarlo. Un lote usa
 un solo `pending_change_id`: se presenta completo, se solicita una única confirmación y se
 llama una sola vez a `confirm_transaction_change`, que inserta todas sus filas atómicamente.
@@ -210,7 +216,7 @@ Nunca se divide un lote en propuestas o confirmaciones individuales.
 
 1. En ChatGPT, crea o edita un GPT y abre **Configure → Actions**.
 2. Elige **Import from URL** e importa
-   `https://pfm-supabase.vercel.app/api/actions/openapi.json`.
+   `https://pfm-supabase.vercel.app/api/actions/openapi.json?v=1.3.1`.
 3. En **Authentication**, selecciona **API Key** y el tipo **Bearer**. Pega como secreto el
    valor de `MCP_ACTIONS_API_KEY`; no incluyas el prefijo `Bearer` dentro del valor.
 4. Copia en **Instructions** el texto canónico de
@@ -231,7 +237,7 @@ El contrato completo está en
 2. Usa `https://pfm-supabase.vercel.app/api/mcp` como URL remota.
 3. Configura `Authorization` con el valor `Bearer <MCP_ACTIONS_API_KEY>` en el campo de
    encabezado o token que muestre tu plan y espacio de trabajo.
-4. Habilita el conector en una conversación nueva y confirma que aparecen las seis
+4. Habilita el conector en una conversación nueva y confirma que aparecen las ocho
    herramientas.
 
 La ubicación y disponibilidad de conectores puede variar según el plan de Claude.ai. Esta
@@ -285,7 +291,7 @@ en julio de 2026?”. El cliente debe invocar una herramienta y no estimar la re
 | `401 Unauthorized` | El token local o del GPT no coincide con `MCP_ACTIONS_API_KEY` en Vercel. |
 | MCP desconectado | Confirma la URL de producción, exporta la variable antes de iniciar el cliente y reinícialo. |
 | `Pending approval` en Claude Code | Abre `claude` en la raíz, confía en el workspace y aprueba `pfm-finance`. |
-| No aparecen seis herramientas | Revisa `/mcp` o `* mcp list`; elimina configuraciones duplicadas y vuelve a iniciar la sesión. |
+| No aparecen ocho herramientas | Revisa `/mcp` o `* mcp list`; elimina configuraciones duplicadas y vuelve a iniciar la sesión. |
 | La consulta devuelve cero filas | Comprueba categoría, tipo y rango de fechas; el asistente debe reportar ausencia de datos, no inventarlos. |
 
 Al rotar el token, cambia el secreto en Vercel, la autenticación del Custom GPT y la

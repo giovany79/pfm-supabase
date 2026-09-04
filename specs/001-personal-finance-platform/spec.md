@@ -254,8 +254,8 @@ figure.
   dashboard, and the Q&A feature to Gio as the sole authorized user.
 - **FR-013**: The system MUST NOT delete or overwrite historical records as a side effect
   of migration, querying, dashboard viewing, or answering a natural-language question;
-  a mutation is permitted only through Gio's explicit, confirmed instruction to create,
-  edit, or permanently delete a transaction.
+  a conversational mutation is permitted only through Gio's explicit, confirmed
+  instruction to change a transaction, asset, or liability.
 - **FR-014**: The system MUST preserve the original currency of each record and MUST NOT
   combine amounts across different currencies in a query, dashboard metric, or
   natural-language answer without explicitly stating that a conversion was applied.
@@ -293,12 +293,12 @@ figure.
   currency → COP) that Gio controls, and MUST use the most recent applicable rate — with
   its effective date shown — whenever a multi-currency figure (e.g., net worth) is
   converted for display; the system MUST NOT auto-fetch rates from an external service.
-- **FR-023**: Once at least one conversational create, edit, or delete of any transaction
-  has been confirmed, the system MUST prevent or explicitly warn against re-running the
-  full migration of `pfm-gio.csv`, so a re-import cannot silently restore an
-  edited/deleted transaction or duplicate a GPT-created one. This applies regardless of
-  whether the confirmed mutation touched a row originally imported from that file or a
-  brand-new one — the lock is simplest and safest as an "any confirmed mutation" trigger,
+- **FR-023**: Once at least one transaction or snapshot mutation has been applied from a
+  conversational surface or the authenticated dashboard, the system MUST prevent or
+  explicitly warn against re-running the full financial CSV migration, so a re-import
+  cannot silently restore or overwrite user-maintained data. This applies regardless of
+  whether the mutation touched an imported row or a brand-new one — the lock is simplest
+  and safest as an "any applied mutation" trigger,
   not one scoped only to edits/deletes of previously-imported rows (resolved 2026-08-09
   post-`/speckit-analyze`, finding I1, to match the already-implemented design in
   research.md R8 §8.5).
@@ -317,6 +317,19 @@ figure.
   expenses by category. It MUST process every transaction through pagination, show the
   principal categories together, and allow any individual category to be selected for a
   focused trend chart.
+- **FR-029**: The authenticated dashboard MUST provide an asset/liability management
+  section that lists current snapshot records and permits Gio to create or update them,
+  including snapshot date, name, kind, category, amount, currency, institution, and notes.
+  Net worth MUST remain a derived value and MUST NOT be directly editable.
+- **FR-030**: ChatGPT Actions and MCP clients MUST allow Gio to create or update one asset
+  or liability through a two-step proposal and explicit-confirmation flow. An edit MUST
+  target an `item_id` returned by `query_snapshots`; confirmation MUST expire after the
+  same bounded window used for transaction mutations, and every confirmed attempt MUST be
+  recorded in a redacted audit log that stores no financial field values.
+- **FR-031**: The asset/liability dashboard MUST display a per-currency historical chart
+  of total assets, total liabilities, and derived net worth, plus a selectable historical
+  chart for each individual asset or liability. General totals MUST carry forward each
+  identity's latest known valuation and MUST NOT combine currencies implicitly.
 
 ### Key Entities
 
@@ -394,8 +407,8 @@ figure.
   beyond single-owner access is in scope.
 - This feature covers migrating the *existing* historical data in `balance-sheet.csv` and
   `pfm-gio.csv`, building query, dashboard, and Q&A capabilities on top of it, and
-  maintaining transaction movements through the conversational interface. Direct entry
-  or maintenance of asset/liability snapshots remains out of scope.
+  maintaining transaction movements and asset/liability snapshots through the dashboard
+  and conversational interfaces. Net worth remains calculated and is never entered directly.
 - Imported transactions are not immutable after migration. A confirmed conversational
   command may edit or permanently delete them, and the system does not retain an
   internal backup or recoverable copy of their prior values.
